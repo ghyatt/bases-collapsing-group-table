@@ -1,0 +1,453 @@
+/* Collapsing Group Table — all styling lives here (no inline styles in JS, per
+   the Obsidian review's no-static-styles rule). Colours use theme variables so
+   the view follows the active theme in both light and dark mode. */
+
+.bcgt-view {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ---- control bar ---- */
+.bcgt-controls {
+  display: flex;
+  gap: var(--size-4-1);
+  margin-bottom: var(--size-4-2);
+}
+
+/* Compact, subtle outline buttons. High-specificity + explicit height to beat
+   Obsidian's default button min-height/padding. */
+.bcgt-controls button.bcgt-control-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  height: 24px;
+  min-height: 0;
+  padding: 0 var(--size-2-3);
+  font-size: var(--font-ui-smaller);
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-accent);
+  background-color: transparent;
+  border: 1px solid var(--interactive-accent);
+  border-radius: var(--radius-s);
+  box-shadow: none;
+}
+
+.bcgt-controls button.bcgt-control-btn:hover {
+  color: var(--text-on-accent);
+  background-color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  box-shadow: none;
+}
+
+.bcgt-stats {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  white-space: pre;
+}
+
+.bcgt-btn-icon {
+  display: inline-flex;
+}
+
+.bcgt-btn-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---- table ---- */
+/* Definite width (sum of columns) so table-layout:fixed actually engages; the
+   container scrolls horizontally when the total exceeds the pane. */
+.bcgt-table {
+  width: var(--bcgt-table-w, 100%);
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--font-ui-small);
+}
+
+/* Per-column width comes from each header <th> (authoritative under
+   table-layout:fixed); unsized columns use the default. */
+.bcgt-col-header {
+  width: var(--bcgt-w, 150px);
+}
+
+/* While dragging a handle, suppress text selection across the table. */
+.bcgt-is-resizing {
+  user-select: none;
+  cursor: col-resize;
+}
+
+.bcgt-col-header {
+  position: relative;
+  text-align: left;
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  padding: var(--size-4-1) var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+  overflow: hidden;
+}
+
+/* Drag handle on the right edge of each header cell. */
+.bcgt-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.bcgt-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 3px;
+  width: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+.bcgt-resize-handle:hover::after,
+.bcgt-resize-handle.is-active::after {
+  right: 2px;
+  width: 2px;
+  background-color: var(--interactive-accent);
+}
+
+/* Header cell: type icon + name + sort-direction arrow, like the native table. */
+.bcgt-col-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  min-width: 0;
+}
+
+.bcgt-col-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+.bcgt-col-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bcgt-col-sort {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.bcgt-col-icon svg,
+.bcgt-col-sort svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* max-width:0 lets the auto table layout shrink cells and distribute width so
+   the table fits its container (long content clamps instead of widening it). */
+.bcgt-cell {
+  padding: var(--size-4-1) var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+  vertical-align: top;
+  color: var(--text-normal);
+  overflow: hidden;
+}
+
+/* Row-height presets: clamp the cell content to a fixed number of lines (like
+   the built-in Table view's Short/Medium/Tall/Extra tall) and cap image height
+   to match. The line count comes from --bcgt-lines, set per preset below. */
+.bcgt-cell-content {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--bcgt-lines, 1);
+  line-clamp: var(--bcgt-lines, 1);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.bcgt-cell-content img {
+  max-height: calc(var(--bcgt-lines, 1) * 1.6em);
+  width: auto;
+}
+
+/* List/tag cells: a flex-wrap container can't live inside the -webkit-box clamp
+   (it mis-measures to ~1 line), so clamp these by max-height instead. */
+.bcgt-cell-content.bcgt-content-list {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: calc(var(--bcgt-lines, 1) * 1.9em);
+  overflow: hidden;
+}
+
+/* While editing, drop the row-height clamp on the content box so the editor
+   (textarea / chip list) lays out and scrolls normally — without this the
+   -webkit-line-clamp box breaks the textarea's caret-following scroll. */
+.bcgt-cell.bcgt-editing .bcgt-cell-content {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: none;
+  overflow: visible;
+}
+
+.bcgt-rows-short {
+  --bcgt-lines: 1;
+}
+
+.bcgt-rows-medium {
+  --bcgt-lines: 3;
+}
+
+.bcgt-rows-tall {
+  --bcgt-lines: 6;
+}
+
+.bcgt-rows-xtall {
+  --bcgt-lines: 12;
+}
+
+/* Dynamic: no clamp, rows grow to fit their content (images at natural size). */
+.bcgt-rows-dynamic .bcgt-cell-content,
+.bcgt-rows-dynamic .bcgt-content-list {
+  display: block;
+  -webkit-line-clamp: none;
+  line-clamp: none;
+  max-height: none;
+  overflow: visible;
+}
+
+.bcgt-rows-dynamic .bcgt-cell-content img {
+  max-height: none;
+}
+
+/* Row hover highlight, like the built-in Table view. */
+.bcgt-row:hover .bcgt-cell {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Accent outline around a cell while it's being edited. */
+.bcgt-cell.bcgt-editing {
+  box-shadow: inset 0 0 0 2px var(--interactive-accent);
+  background-color: var(--background-primary);
+}
+
+/* Whole editable cell is clickable to edit. */
+.bcgt-cell-editable {
+  cursor: text;
+}
+
+.bcgt-checkbox {
+  cursor: pointer;
+  margin: 0;
+  vertical-align: middle;
+}
+
+/* Click-to-edit cells. The display wrapper hints editability on hover; the
+   input fills the cell while editing. */
+.bcgt-editable {
+  cursor: text;
+  min-height: 1.2em;
+  border-radius: var(--radius-s);
+}
+
+.bcgt-editable:hover {
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
+}
+
+.bcgt-edit-input {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0 var(--size-2-2);
+  font-size: inherit;
+  line-height: 1.4;
+}
+
+/* Multi-line text editor sized via its rows attribute (set to the row-height
+   preset's line count). */
+.bcgt-edit-textarea {
+  display: block;
+  resize: vertical;
+  overflow-y: auto;
+  padding: var(--size-2-1) var(--size-2-2);
+  line-height: 1.4;
+}
+
+/* ---- editable list (tags) cell ---- */
+.bcgt-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-2);
+  min-height: 1.4em;
+  cursor: text;
+}
+
+/* Each item keeps its native rendering (tag pill / link); we only add a
+   hover-× alongside it. */
+.bcgt-litem {
+  display: inline-flex;
+  align-items: center;
+}
+
+.bcgt-litem-x {
+  display: inline;
+  cursor: pointer;
+  margin-left: 1px;
+  padding: 0 2px;
+  color: var(--text-muted);
+  font-weight: var(--font-bold);
+  line-height: 1;
+}
+
+.bcgt-litem-x:hover {
+  color: var(--text-error);
+}
+
+/* Add-input sized to the row text (short height, inherited font). */
+.bcgt-list-input {
+  flex: 1 1 4ch;
+  width: 4ch;
+  min-width: 4ch;
+  height: 1.4em;
+  min-height: 0;
+  padding: 0 var(--size-2-1);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: inherit;
+  line-height: 1.4;
+}
+
+.bcgt-file-link {
+  cursor: pointer;
+  color: var(--link-color);
+  text-decoration: var(--link-decoration);
+}
+
+.bcgt-file-link:hover {
+  color: var(--link-color-hover);
+  text-decoration: var(--link-decoration-hover);
+}
+
+/* ---- group header (clickable, foldable) ---- */
+.bcgt-group-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* The cell stays a real table cell so colSpan spans the whole table and the
+   coloured background fills the full row width. Layout happens in the inner div.
+   Accent-tinted band to match the built-in Table's group rows. */
+.bcgt-group-cell {
+  padding: var(--size-4-1) var(--size-4-2);
+  background-color: var(--background-modifier-active-hover);
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-top: 1px solid var(--background-modifier-border);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+
+.bcgt-group-inner {
+  /* inline-flex so it sizes to its content (chevron + name + count) instead of
+     stretching across the full-width group cell; sticky-left keeps it visible
+     when the table is wider than the pane and scrolled horizontally. */
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  position: sticky;
+  left: var(--size-4-2);
+}
+
+.bcgt-group-header:hover .bcgt-group-cell {
+  filter: brightness(1.15);
+}
+
+.bcgt-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  transition: transform 0.1s ease;
+}
+
+.bcgt-group-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 60ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bcgt-group-none {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.bcgt-group-count {
+  flex: 0 0 auto;
+  /* Fixed-width, right-aligned column so every count's right edge lines up and
+     the names after them start at the same x across all groups. */
+  width: 3ch;
+  text-align: right;
+  color: var(--text-on-accent);
+  background-color: var(--interactive-accent);
+  border-radius: var(--radius-s);
+  padding: 0 var(--size-4-2);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- collapsed state ---- */
+.bcgt-collapsed .bcgt-chevron {
+  transform: rotate(-90deg);
+}
+
+.bcgt-collapsed .bcgt-row {
+  display: none;
+}
+
+/* ---- error / empty state ---- */
+.bcgt-error {
+  padding: var(--size-4-3);
+  color: var(--text-muted);
+}
+
+/* ---- off-screen measuring box for double-click auto-fit ----
+   Cloned cell/header content is dropped in here, unclamped and on a single line,
+   so we can read its natural width. Kept last so its clamp overrides win on ties. */
+.bcgt-measure {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: var(--font-ui-small);
+}
+
+.bcgt-measure .bcgt-cell-content,
+.bcgt-measure .bcgt-col-inner {
+  display: inline-flex;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  white-space: nowrap;
+  max-width: none;
+  overflow: visible;
+}
+
+.bcgt-measure img {
+  max-height: 1.6em;
+  width: auto;
+}

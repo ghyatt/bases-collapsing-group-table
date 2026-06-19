@@ -1,0 +1,52 @@
+name: Release Obsidian plugin
+
+# Trigger on pushing a version tag. The tag MUST equal the "version" field in
+# manifest.json with NO leading "v" (e.g. git tag 1.0.0 && git push origin 1.0.0).
+# Both BRAT and the community catalog read the plugin from the release this builds.
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18.x"
+
+      - name: Build plugin
+        run: |
+          npm install
+          npm run build
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          # Attach main.js / manifest.json / styles.css as individual assets
+          # (not zipped). Created as a draft with auto-generated notes so you
+          # can review before publishing.
+          gh release create "$tag" \
+            --title="$tag" \
+            --generate-notes \
+            --draft \
+            main.js manifest.json styles.css

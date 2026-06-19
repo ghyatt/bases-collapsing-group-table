@@ -1,0 +1,35 @@
+{
+  "name": "bases-collapsing-group-table",
+  "version": "0.1.0",
+  "description": "Bases table view with collapsible, tree-like groups for Obsidian",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
+  },
+  "author": "Gilbert Hyatt",
+  "homepage": "https://github.com/ghyatt/bases-collapsing-group-table#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghyatt/bases-collapsing-group-table.git"
+  },
+  "keywords": [
+    "obsidian",
+    "bases",
+    "table",
+    "group",
+    "collapse",
+    "tree"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "@typescript-eslint/eslint-plugin": "^5.2.0",
+    "@typescript-eslint/parser": "^5.2.0",
+    "esbuild": "0.13.12",
+    "obsidian": "^1.13.1",
+    "tslib": "2.3.1",
+    "typescript": "^4.4.4"
+  }
+}
