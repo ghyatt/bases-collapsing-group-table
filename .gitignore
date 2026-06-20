@@ -11,5 +11,6 @@ data.json
 plugin_review-*.md
 reviews/
 
-# local test vault fixtures (real clipped notes — not part of the plugin)
+# local test vault fixtures (real notes — not part of the plugin)
 Clippings/
+Bookmarks/

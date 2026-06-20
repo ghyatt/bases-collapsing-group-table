@@ -9,6 +9,12 @@ export interface TableSettings {
   startCollapsed: boolean
   // Show the entry count beside each group header.
   showCount: boolean
+  // Recursively sub-group rows within a group by repeated leading-column values
+  // (a value shared by 2+ rows becomes a collapsible "Group → value" sub-group).
+  subGroup: boolean
+  // What happens to sub-groups when a group is opened: 'first' (open the first
+  // sub-group), 'all' (open all), or 'none' (keep them collapsed).
+  openBehavior: string
   // Optional moment.js format applied to date cells (e.g. "YYYY-MM-DD"). Empty
   // string = use Obsidian's default date rendering. Works around the Bases API
   // not exposing the per-property date format to custom views.

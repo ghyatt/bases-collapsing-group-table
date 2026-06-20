@@ -33,6 +33,12 @@ interface MetadataCacheWithTags {
   getTags?: () => Record<string, number>
 }
 
+// The view config's built-in groupBy field isn't in the public typings (it lives
+// alongside, not inside, the custom-options bag that config.get() reads).
+interface ConfigWithGroupBy {
+  groupBy?: { property?: string; direction?: string }
+}
+
 // Autocomplete popover for a list cell's add-input: vault tags or page links,
 // filtered as you type. Selecting a suggestion adds it via onPick.
 class ListSuggest extends AbstractInputSuggest<string> {
@@ -87,22 +93,93 @@ interface BuildTableArgs {
   keys: string[]
   // Collapse state, mutated in place by this builder. The view owns the Set.
   collapsed: Set<string>
+  // When true, the fold state is the option-driven default (no saved folds), so
+  // sub-groups are initialised per the "when opening a group" setting.
+  applyOpenDefault: boolean
   // Called when the user manually folds/unfolds, so the view stops auto-applying
   // the start-collapsed default and preserves the user's choice.
   markTouched: () => void
 }
 
 const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
-  const { app, groups, columns, config, isGrouped, settings, keys, collapsed, markTouched } = args
+  const { app, groups, columns, config, isGrouped, settings, keys, collapsed, applyOpenDefault, markTouched } =
+    args
 
   const allKeys = keys
-  const bodyByKey = new Map<string, HTMLElement>()
+  // Top-level fold keys for accordion (reassigned to the tree roots in Option X).
+  let topLevelKeys: string[] = allKeys
+  // Path separator: splits group values into a hierarchy and joins fold-key
+  // prefixes (a fold key is the full path prefix, e.g. "ai/llm_wiki").
+  const SEP = '/'
+  // Every fold target's key (top groups + sub-groups), for Collapse all + prune.
+  const allFoldKeys = new Set<string>()
+  // Each rendered row + the fold keys above it: a row is hidden when any
+  // ancestor fold key is collapsed.
+  const rowMeta: { el: HTMLElement; ancestors: string[] }[] = []
+  // Each header's chevron, keyed by its own fold key, for rotation.
+  const chevrons: { key: string; el: HTMLElement }[] = []
+  // Tree relationships (populated during render): a fold key → all its descendant
+  // fold keys, and → its ordered direct-child fold keys.
+  const descendants = new Map<string, string[]>()
+  const directChildren = new Map<string, string[]>()
 
-  // Sync every group's DOM fold-state to the `collapsed` set.
+  // Sync all rows' visibility and chevrons to the `collapsed` set.
   const applyAll = (): void => {
-    for (const [key, tbody] of bodyByKey) {
-      tbody.toggleClass('bcgt-collapsed', collapsed.has(key))
+    for (const { el, ancestors } of rowMeta) {
+      el.toggleClass('bcgt-hidden', ancestors.some((k) => collapsed.has(k)))
     }
+    for (const { key, el } of chevrons) {
+      el.toggleClass('bcgt-chev-collapsed', collapsed.has(key))
+    }
+  }
+
+  // Apply the "when opening a group" setting to a key's sub-groups.
+  const applyOpenBehavior = (key: string): void => {
+    const desc = descendants.get(key) ?? []
+    if (settings.openBehavior === 'all') {
+      for (const d of desc) collapsed.delete(d) // open everything below
+    } else if (settings.openBehavior === 'none') {
+      for (const d of desc) collapsed.add(d) // keep all sub-groups collapsed
+    } else {
+      // 'first' — collapse all sub-groups, then open just the first child
+      for (const d of desc) collapsed.add(d)
+      const kids = directChildren.get(key) ?? []
+      if (kids.length > 0) collapsed.delete(kids[0])
+    }
+  }
+
+  // Open/close a fold. Closing also collapses every descendant sub-group;
+  // opening applies the open-behavior to the sub-groups.
+  const setFold = (key: string, open: boolean): void => {
+    if (open) {
+      collapsed.delete(key)
+      applyOpenBehavior(key)
+    } else {
+      collapsed.add(key)
+      for (const d of descendants.get(key) ?? []) collapsed.add(d)
+    }
+  }
+
+  // Top-level group toggle (accordion-aware).
+  const toggleTop = (key: string): void => {
+    markTouched()
+    const opening = collapsed.has(key)
+    if (settings.accordion && opening) {
+      // collapse every other top group (and their sub-groups) first
+      for (const k of topLevelKeys) {
+        collapsed.add(k)
+        for (const d of descendants.get(k) ?? []) collapsed.add(d)
+      }
+    }
+    setFold(key, opening)
+    applyAll()
+  }
+
+  // Sub-group toggle.
+  const toggleFold = (key: string): void => {
+    markTouched()
+    setFold(key, collapsed.has(key))
+    applyAll()
   }
 
   // ---- control bar (only meaningful when grouped) ----
@@ -123,15 +200,41 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     })
     collapseBtn.addEventListener('click', () => {
       markTouched()
-      for (const key of allKeys) collapsed.add(key)
+      for (const key of allFoldKeys) collapsed.add(key)
       applyAll()
     })
 
     const noteCount = groups.reduce((sum, g) => sum + g.entries.length, 0)
-    bar.createSpan({
-      cls: 'bcgt-stats',
-      text: `Groups: ${groups.length} · Notes: ${noteCount}`,
-    })
+    // When nested, the top groups are the distinct first path segments, not the
+    // raw Bases groups (full path values).
+    const groupCount = settings.subGroup
+      ? new Set(keys.map((k) => k.split(SEP)[0])).size
+      : groups.length
+
+    const statsEl = bar.createSpan('bcgt-stats')
+    const addStat = (label: string, value: string, sep: string): void => {
+      if (sep) statsEl.createSpan({ text: sep })
+      statsEl.createSpan({ cls: 'bcgt-stat-label', text: `${label} ` })
+      statsEl.createSpan({ text: value })
+    }
+    addStat('Groups:', String(groupCount), '')
+    addStat('Notes:', String(noteCount), ' · ')
+
+    // Grouped-by property name (read from the built-in groupBy config field).
+    const prop = (config as unknown as ConfigWithGroupBy).groupBy?.property
+    if (typeof prop === 'string' && prop.length > 0) {
+      let name = prop
+      try {
+        name = config.getDisplayName(prop as BasesPropertyId)
+      } catch {
+        /* fall back to the raw property id */
+      }
+      addStat('GroupedBy:', name, ' - ')
+    }
+
+    if (settings.subGroup) {
+      bar.createSpan({ cls: 'bcgt-stats bcgt-nested-tag', text: '[nested]' })
+    }
   }
 
   // ---- table head (column names) ----
@@ -721,67 +824,157 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     renderValue(inner, entry, col)
   }
 
-  // Toggle a single group, honouring accordion mode ("expand only one").
-  const toggleGroup = (key: string): void => {
-    markTouched()
-    const isCollapsed = collapsed.has(key)
-    if (settings.accordion && isCollapsed) {
-      // expanding in accordion mode collapses every other group
-      for (const k of allKeys) collapsed.add(k)
-      collapsed.delete(key)
-    } else if (isCollapsed) {
-      collapsed.delete(key)
-    } else {
-      collapsed.add(key)
-    }
-    applyAll()
+  const renderDataRow = (tbody: HTMLElement, entry: BasesEntry, ancestors: string[]): void => {
+    const row = tbody.createEl('tr', { cls: 'bcgt-row' })
+    rowMeta.push({ el: row, ancestors })
+    for (const col of columns) renderCell(row.createEl('td', { cls: 'bcgt-cell' }), entry, col)
   }
 
-  // ---- group bodies ----
-  groups.forEach((group, gi) => {
-    const key = keys[gi]
-    const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
-    bodyByKey.set(key, tbody)
-
-    if (isGrouped) {
-      const headerRow = tbody.createEl('tr', { cls: 'bcgt-group-header' })
-      const cell = headerRow.createEl('td', { cls: 'bcgt-group-cell' })
-      cell.colSpan = colCount
-      // Inner flex wrapper: the <td> itself must stay a normal table cell so
-      // colSpan (full-width span) and its background are honoured — putting
-      // display:flex on the <td> would drop it out of the table layout.
-      const inner = cell.createDiv('bcgt-group-inner')
-
-      // Chevron, then count (fixed width so they align), then the group name.
-      const chevron = inner.createSpan('bcgt-chevron')
-      setIcon(chevron, 'chevron-down')
-
-      if (settings.showCount) {
-        inner.createSpan({ cls: 'bcgt-group-count', text: String(group.entries.length) })
+  // A collapsible header row (top group or, when depth > 0, a sub-group). Single
+  // spanning cell; sub-groups are indented by depth and show a "A → B" breadcrumb.
+  const renderHeader = (
+    tbody: HTMLElement,
+    depth: number,
+    foldKey: string,
+    ancestors: string[],
+    labelText: string,
+    count: number,
+    subCount: number,
+    labelValue?: Value | null,
+  ): void => {
+    allFoldKeys.add(foldKey)
+    const isTop = depth === 0
+    const tr = tbody.createEl('tr', { cls: isTop ? 'bcgt-group-header' : 'bcgt-subgroup-header' })
+    rowMeta.push({ el: tr, ancestors })
+    const cell = tr.createEl('td', { cls: isTop ? 'bcgt-group-cell' : 'bcgt-subgroup-cell' })
+    cell.colSpan = colCount
+    if (!isTop) cell.style.setProperty('--depth', String(depth))
+    const inner = cell.createDiv('bcgt-group-inner')
+    const chevron = inner.createSpan('bcgt-chevron')
+    setIcon(chevron, 'chevron-down')
+    chevrons.push({ key: foldKey, el: chevron })
+    if (settings.showCount) {
+      inner.createSpan({ cls: 'bcgt-group-count', text: String(count) })
+    }
+    const label = inner.createSpan('bcgt-group-label')
+    if (labelValue) {
+      try {
+        labelValue.renderTo(label, app.renderContext)
+      } catch {
+        label.setText(labelText)
       }
+    } else {
+      label.setText(labelText)
+    }
+    if (labelText === '(none)') label.addClass('bcgt-group-none')
+    if (subCount > 1) {
+      inner.createSpan({ cls: 'bcgt-subgroup-tally', text: String(subCount) })
+    }
+    tr.addEventListener('click', () => (isTop ? toggleTop(foldKey) : toggleFold(foldKey)))
+  }
 
-      const label = inner.createSpan('bcgt-group-label')
-      if (group.hasKey() && group.key) {
-        try {
-          group.key.renderTo(label, app.renderContext)
-        } catch {
-          label.setText(group.key.toString())
+  // ---- Option X: split each group value on '/' into a nested tree ----
+  interface TreeNode {
+    key: string // full path prefix, e.g. "ai/llm_wiki" (also the fold key)
+    label: string // this segment, e.g. "llm_wiki"
+    children: Map<string, TreeNode>
+    entries: BasesEntry[]
+  }
+  const nodeTotal = (node: TreeNode): number =>
+    node.entries.length + [...node.children.values()].reduce((s, c) => s + nodeTotal(c), 0)
+
+  const renderNode = (
+    tbody: HTMLElement,
+    node: TreeNode,
+    depth: number,
+    ancestors: string[],
+    labelPath: string[],
+  ): void => {
+    const segLabel = node.label === '__bcgt_none__' ? '(none)' : node.label
+    const breadcrumb = [...labelPath, segLabel]
+    renderHeader(
+      tbody,
+      depth,
+      node.key,
+      ancestors,
+      breadcrumb.join(' → '),
+      nodeTotal(node),
+      node.children.size,
+    )
+    const childAncestors = [...ancestors, node.key]
+    for (const child of node.children.values()) {
+      renderNode(tbody, child, depth + 1, childAncestors, breadcrumb)
+    }
+    for (const entry of node.entries) renderDataRow(tbody, entry, childAncestors)
+  }
+
+  if (isGrouped && settings.subGroup) {
+    // Build the tree from group values, then render each top segment as a tbody.
+    const roots = new Map<string, TreeNode>()
+    groups.forEach((group, gi) => {
+      const segs = keys[gi].split(SEP).map((s) => s.trim()).filter((s) => s.length > 0)
+      if (segs.length === 0) segs.push(keys[gi])
+      let level = roots
+      let prefix = ''
+      let node: TreeNode | undefined
+      for (const seg of segs) {
+        prefix = prefix ? `${prefix}${SEP}${seg}` : seg
+        node = level.get(prefix)
+        if (!node) {
+          node = { key: prefix, label: seg, children: new Map(), entries: [] }
+          level.set(prefix, node)
         }
-      } else {
-        label.setText('(none)')
-        label.addClass('bcgt-group-none')
+        level = node.children
       }
-
-      headerRow.addEventListener('click', () => toggleGroup(key))
+      if (node) node.entries.push(...group.entries)
+    })
+    topLevelKeys = [...roots.keys()]
+    // Record tree relationships for the open/close behaviors.
+    const collect = (node: TreeNode): string[] => {
+      const kids = [...node.children.values()]
+      directChildren.set(node.key, kids.map((k) => k.key))
+      const all: string[] = []
+      for (const c of kids) all.push(c.key, ...collect(c))
+      descendants.set(node.key, all)
+      return all
     }
-
-    for (const entry of group.entries) {
-      const row = tbody.createEl('tr', { cls: 'bcgt-row' })
-      for (const col of columns) {
-        renderCell(row.createEl('td', { cls: 'bcgt-cell' }), entry, col)
+    for (const root of roots.values()) collect(root)
+    // Initialise sub-group folds per "when opening a group" for the default
+    // (unsaved) state: open top groups get the open-behavior applied; collapsed
+    // ones have their descendants collapsed too.
+    if (applyOpenDefault) {
+      for (const topKey of topLevelKeys) {
+        if (collapsed.has(topKey)) {
+          for (const d of descendants.get(topKey) ?? []) collapsed.add(d)
+        } else {
+          applyOpenBehavior(topKey)
+        }
       }
     }
-  })
+    for (const root of roots.values()) {
+      const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
+      renderNode(tbody, root, 0, [], [])
+    }
+  } else {
+    // Flat: one tbody per Bases group (sub-grouping off, or no groupBy).
+    groups.forEach((group, gi) => {
+      const topKey = keys[gi]
+      const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
+      let baseAncestors: string[] = []
+      if (isGrouped) {
+        const hasKey = group.hasKey() && group.key
+        const labelStr = hasKey ? group.key!.toString() : '(none)'
+        renderHeader(tbody, 0, topKey, [], labelStr, group.entries.length, 0, hasKey ? group.key : null)
+        baseAncestors = [topKey]
+      }
+      for (const entry of group.entries) renderDataRow(tbody, entry, baseAncestors)
+    })
+  }
+
+  // Forget any collapsed keys whose group/sub-group no longer exists.
+  for (const k of [...collapsed]) {
+    if (!allFoldKeys.has(k)) collapsed.delete(k)
+  }
 
   applyAll()
 

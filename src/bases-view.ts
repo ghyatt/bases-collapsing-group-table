@@ -60,26 +60,43 @@ export class GroupTableView extends BasesView {
       group.hasKey() && group.key ? group.key.toString() : '__bcgt_none__'
 
     const allKeys = groups.map(keyOf)
+    // Top-level fold keys. With sub-grouping (Option X) the group value is split
+    // on '/', so the top level is the distinct first segments; otherwise each
+    // full group value is its own top group.
+    const topKeys = settings.subGroup
+      ? Array.from(new Set(allKeys.map((k) => k.split('/')[0])))
+      : allKeys
 
-    const sig = `${settings.accordion ? 'acc' : ''}|${settings.startCollapsed ? 'sc' : ''}`
+    // 'sg' in the signature: toggling sub-grouping changes the whole fold-key
+    // scheme (segments vs full values), so saved folds shouldn't carry over.
+    const sig =
+      `${settings.accordion ? 'acc' : ''}|${settings.startCollapsed ? 'sc' : ''}` +
+      `|${settings.subGroup ? 'sg' : ''}`
+    // applyOpenDefault: true when we're showing the option-driven default (no
+    // saved folds) — buildTable then initialises sub-groups per "when opening a
+    // group". When restoring saved folds, we leave them as-is.
+    let applyOpenDefault = false
     if (this.collapsed === null || !this.userTouched) {
-      // No manual folding yet — load the saved fold (if it matches the current
-      // options) or fall back to the default. Re-runs each render so it applies
-      // even if the first render predated grouping or the instance is reused.
-      this.collapsed = this.loadCollapsed(allKeys, settings, sig)
+      // No manual folding yet — restore saved folds (if they match the current
+      // options) or fall back to the option-driven default. Re-runs each render.
+      const saved = this.savedFold(sig)
+      if (saved) {
+        this.collapsed = saved
+      } else {
+        this.collapsed = this.resolveCollapsed(topKeys, settings)
+        applyOpenDefault = true
+      }
       this.collapseSig = sig
     } else if (sig !== this.collapseSig) {
-      // The user flipped accordion or start-collapsed — reset to the new default,
-      // save it, and resume tracking.
-      this.collapsed = this.resolveCollapsed(allKeys, settings)
+      // The user flipped an option — reset to the new default, save, and resume.
+      this.collapsed = this.resolveCollapsed(topKeys, settings)
       this.collapseSig = sig
       this.userTouched = false
       this.saveFold()
+      applyOpenDefault = true
     }
-    // Forget keys for groups that no longer exist.
-    for (const key of [...this.collapsed]) {
-      if (!allKeys.includes(key)) this.collapsed.delete(key)
-    }
+    // Stale-key pruning (top-level and sub-group keys) is done inside buildTable,
+    // which knows every fold key that exists this render.
 
     // Guard the whole render so an unexpected error shows a message instead of
     // leaving a broken/blank view.
@@ -95,6 +112,7 @@ export class GroupTableView extends BasesView {
         // strings as our collapsed set.
         keys: allKeys,
         collapsed: this.collapsed,
+        applyOpenDefault,
         markTouched: () => {
           this.userTouched = true
           this.saveFold()
@@ -121,22 +139,25 @@ export class GroupTableView extends BasesView {
       startCollapsed: this.config.get('startCollapsed') === true,
       // default true
       showCount: this.config.get('showCount') !== false,
+      subGroup: this.config.get('subGroup') === true,
+      openBehavior: typeof this.config.get('openBehavior') === 'string'
+        ? (this.config.get('openBehavior') as string)
+        : 'first',
       dateFormat: typeof df === 'string' ? df.trim() : '',
     }
   }
 
-  // Restore saved folds when they match the current option-signature, else use
-  // the option-driven default.
-  private loadCollapsed(allKeys: string[], settings: TableSettings, sig: string): Set<string> {
+  // Saved folds if they match the current option-signature, else null. Keeps all
+  // saved keys (top-level and sub-group); buildTable prunes any that are stale.
+  private savedFold(sig: string): Set<string> | null {
     const saved = this.config.get(FOLD_KEY)
     if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
       const s = saved as { sig?: unknown; keys?: unknown }
       if (s.sig === sig && Array.isArray(s.keys)) {
-        const keys = s.keys.filter((k): k is string => typeof k === 'string')
-        return new Set(keys.filter((k) => allKeys.includes(k)))
+        return new Set(s.keys.filter((k): k is string => typeof k === 'string'))
       }
     }
-    return this.resolveCollapsed(allKeys, settings)
+    return null
   }
 
   // The option-driven default fold state:

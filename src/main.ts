@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian'
+import { BasesAllOptions, Plugin } from 'obsidian'
 import { GroupTableView, VIEW_TYPE } from './bases-view'
 
 export default class CollapsingGroupTablePlugin extends Plugin {
@@ -7,7 +7,7 @@ export default class CollapsingGroupTablePlugin extends Plugin {
       name: 'Collapsing group table',
       icon: 'lucide-list-tree',
       factory: (controller, containerEl) => new GroupTableView(controller, containerEl),
-      options: () => {
+      options: (): BasesAllOptions[] => {
         return [
           {
             type: 'dropdown',
@@ -39,6 +39,23 @@ export default class CollapsingGroupTablePlugin extends Plugin {
             displayName: 'Show entry count on group headers',
             key: 'showCount',
             default: true,
+          },
+          {
+            type: 'toggle',
+            displayName: 'Sub-group repeated values (nested groups)',
+            key: 'subGroup',
+            default: false,
+          },
+          {
+            type: 'dropdown',
+            displayName: 'When opening a group',
+            key: 'openBehavior',
+            default: 'first',
+            options: {
+              first: 'Open first sub-group',
+              all: 'Open all sub-groups',
+              none: 'Open no sub-groups',
+            },
           },
           {
             type: 'text',

@@ -49,6 +49,17 @@
   white-space: pre;
 }
 
+/* Bold white stat labels (Groups / Notes / GroupedBy); values stay muted. */
+.bcgt-stat-label {
+  color: var(--text-normal);
+  font-weight: var(--font-bold);
+}
+
+.bcgt-nested-tag {
+  color: var(--text-accent);
+  font-weight: var(--font-medium);
+}
+
 .bcgt-btn-icon {
   display: inline-flex;
 }
@@ -341,7 +352,8 @@
 }
 
 /* ---- group header (clickable, foldable) ---- */
-.bcgt-group-header {
+.bcgt-group-header,
+.bcgt-subgroup-header {
   cursor: pointer;
   user-select: none;
 }
@@ -356,6 +368,25 @@
   border-top: 1px solid var(--background-modifier-border);
   font-weight: var(--font-semibold);
   color: var(--text-normal);
+}
+
+/* Sub-group header: a band halfway between the top-group color and the row/
+   secondary color, so it's clearly distinct; indented by nesting depth. */
+.bcgt-subgroup-cell {
+  padding: var(--size-4-1) var(--size-4-2);
+  padding-left: calc(var(--size-4-2) + var(--depth, 0) * 1.5em);
+  background-color: color-mix(
+    in srgb,
+    var(--background-modifier-active-hover) 50%,
+    var(--background-secondary)
+  );
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+  font-weight: var(--font-medium);
+  color: var(--text-normal);
+}
+
+.bcgt-subgroup-header:hover .bcgt-subgroup-cell {
+  filter: brightness(1.15);
 }
 
 .bcgt-group-inner {
@@ -394,6 +425,21 @@
   font-style: italic;
 }
 
+/* Compact badge with the number of direct sub-groups (after the group name).
+   Neutral colour so it reads distinctly from the accent entry-count badge. */
+.bcgt-subgroup-tally {
+  flex: 0 0 auto;
+  min-width: 3ch;
+  text-align: right;
+  color: var(--text-muted);
+  background-color: var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: 0 var(--size-4-2);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  font-variant-numeric: tabular-nums;
+}
+
 .bcgt-group-count {
   flex: 0 0 auto;
   /* Fixed-width, right-aligned column so every count's right edge lines up and
@@ -410,11 +456,13 @@
 }
 
 /* ---- collapsed state ---- */
-.bcgt-collapsed .bcgt-chevron {
+/* Chevron points right when its own fold is collapsed. */
+.bcgt-chev-collapsed {
   transform: rotate(-90deg);
 }
 
-.bcgt-collapsed .bcgt-row {
+/* Rows/headers hidden because an ancestor fold is collapsed. */
+.bcgt-hidden {
   display: none;
 }
 

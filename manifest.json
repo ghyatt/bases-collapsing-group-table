@@ -1,9 +1,9 @@
 {
   "id": "bases-collapsing-group-table",
   "name": "Collapsing Group Table",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.10.2",
-  "description": "A Bases table view whose groups collapse and expand like a tree, with expand-all, collapse-all, and accordion modes.",
+  "description": "A Bases table view whose groups collapse like a tree, with nested groups, inline editing, and tag/link autocomplete.",
   "author": "Gilbert Hyatt",
   "authorUrl": "https://github.com/ghyatt",
   "isDesktopOnly": false
