@@ -175,10 +175,21 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     applyAll()
   }
 
-  // Sub-group toggle.
+  // Sub-group toggle (accordion-aware: opening collapses sibling sub-groups).
   const toggleFold = (key: string): void => {
     markTouched()
-    setFold(key, collapsed.has(key))
+    const opening = collapsed.has(key)
+    if (settings.accordion && opening) {
+      // A fold key is its path prefix, so the parent is everything before the
+      // last separator; siblings are the parent's other direct children.
+      const parent = key.slice(0, key.lastIndexOf(SEP))
+      for (const sib of directChildren.get(parent) ?? []) {
+        if (sib === key) continue
+        collapsed.add(sib)
+        for (const d of descendants.get(sib) ?? []) collapsed.add(d)
+      }
+    }
+    setFold(key, opening)
     applyAll()
   }
 
