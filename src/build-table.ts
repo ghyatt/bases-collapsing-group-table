@@ -42,6 +42,10 @@ interface ConfigWithGroupBy {
 // Autocomplete popover for a list cell's add-input: vault tags or page links,
 // filtered as you type. Selecting a suggestion adds it via onPick.
 class ListSuggest extends AbstractInputSuggest<string> {
+  // Page list cached for the lifetime of this suggester (one edit session), so
+  // the vault is enumerated once rather than on every keystroke.
+  private pages: { name: string; link: string }[] | null = null
+
   constructor(
     app: App,
     inputEl: HTMLInputElement,
@@ -59,12 +63,14 @@ class ListSuggest extends AbstractInputSuggest<string> {
     if (this.mode === 'tag') {
       return this.tags.filter((t) => t.toLowerCase().includes(q) && !existing.has(t)).slice(0, 50)
     }
+    if (!this.pages) {
+      this.pages = this.app.vault
+        .getMarkdownFiles()
+        .map((f) => ({ name: f.basename.toLowerCase(), link: `[[${f.basename}]]` }))
+    }
     const out: string[] = []
-    for (const f of this.app.vault.getMarkdownFiles()) {
-      if (f.basename.toLowerCase().includes(q)) {
-        const text = `[[${f.basename}]]`
-        if (!existing.has(text)) out.push(text)
-      }
+    for (const p of this.pages) {
+      if (p.name.includes(q) && !existing.has(p.link)) out.push(p.link)
       if (out.length >= 50) break
     }
     return out
