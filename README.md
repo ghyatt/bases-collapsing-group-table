@@ -1,4 +1,7 @@
-# Bases Table View that support collapsable grouping
+# Collapsing Group Table
+
+_A Bases Table view that supports collapsable grouping._
+
 ![collapsable groups](assets/collapsable_groups.jpg)
 
 A [Bases](https://obsidian.md/help/bases) Table view for [Obsidian](https://obsidian.md/) that turns grouped results into a **collapsible tree** — fold and unfold groups like branches, optional support for nested hierarchical groups from a single `/`-delimited property, and edit your notes inline.

@@ -506,7 +506,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
 
   // Outline the enclosing cell while it's being edited.
   const setEditing = (el: HTMLElement, on: boolean): void => {
-    const cell = el.closest('.bcgt-cell') as HTMLElement | null
+    const cell = el.closest('.bcgt-cell')
     cell?.toggleClass('bcgt-editing', on)
   }
 
@@ -560,7 +560,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
       renderValue(inner, entry, col)
       return
     }
-    const cell = inner.closest('.bcgt-cell') as HTMLElement | null
+    const cell = inner.closest('.bcgt-cell')
 
     const showRead = (): void => {
       setEditing(inner, false)
@@ -767,7 +767,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     }
 
     // Clicking anywhere in the cell (except a tag/link/×) starts adding.
-    const cell = inner.closest('.bcgt-cell') as HTMLElement | null
+    const cell = inner.closest('.bcgt-cell')
     cell?.addEventListener('click', (evt) => {
       if ((evt.target as HTMLElement).closest('a, input, button, .bcgt-litem-x')) return
       openInput()
