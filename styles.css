@@ -177,15 +177,11 @@
    level (content actually shifts right), with one thin accent bar drawn at the
    start of each level's indent space — so text always clears the bars. */
 .bcgt-rail {
-  padding-left: calc(var(--size-4-2) + var(--depth, 0) * 16px);
-  background-image: repeating-linear-gradient(
-    90deg,
-    var(--background-modifier-border-focus) 0 2px,
-    transparent 2px 16px
-  );
-  background-repeat: no-repeat;
-  background-position: var(--size-4-2) 0;
-  background-size: calc(var(--depth, 0) * 16px) 100%;
+  /* Indent the first cell by one step per nesting level via a transparent
+     left border (reliably pushes content right in fixed table layout), with a
+     solid accent line marking the row as nested. */
+  border-left: calc(var(--depth, 0) * 1.5em) solid transparent;
+  box-shadow: inset 2px 0 0 0 var(--interactive-accent);
 }
 
 /* Row-height presets: clamp the cell content to a fixed number of lines (like
