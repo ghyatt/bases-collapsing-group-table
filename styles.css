@@ -173,6 +173,21 @@
   overflow: hidden;
 }
 
+/* Rows nested under a sub-group: indent the first cell by one step per nesting
+   level (content actually shifts right), with one thin accent bar drawn at the
+   start of each level's indent space — so text always clears the bars. */
+.bcgt-rail {
+  padding-left: calc(var(--size-4-2) + var(--depth, 0) * 16px);
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--background-modifier-border-focus) 0 2px,
+    transparent 2px 16px
+  );
+  background-repeat: no-repeat;
+  background-position: var(--size-4-2) 0;
+  background-size: calc(var(--depth, 0) * 16px) 100%;
+}
+
 /* Row-height presets: clamp the cell content to a fixed number of lines (like
    the built-in Table view's Short/Medium/Tall/Extra tall) and cap image height
    to match. The line count comes from --bcgt-lines, set per preset below. */

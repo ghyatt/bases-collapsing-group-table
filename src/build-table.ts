@@ -844,7 +844,17 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
   const renderDataRow = (tbody: HTMLElement, entry: BasesEntry, ancestors: string[]): void => {
     const row = tbody.createEl('tr', { cls: 'bcgt-row' })
     rowMeta.push({ el: row, ancestors })
-    for (const col of columns) renderCell(row.createEl('td', { cls: 'bcgt-cell' }), entry, col)
+    // Nesting depth = headers above this row. The first cell draws one thin left
+    // accent bar per level (as a background, so cell content isn't reflowed).
+    const depth = ancestors.length
+    columns.forEach((col, ci) => {
+      const td = row.createEl('td', { cls: 'bcgt-cell' })
+      if (ci === 0 && depth > 1) {
+        td.addClass('bcgt-rail')
+        td.style.setProperty('--depth', String(depth - 1))
+      }
+      renderCell(td, entry, col)
+    })
   }
 
   // A collapsible header row (top group or, when depth > 0, a sub-group). Single
