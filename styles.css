@@ -189,17 +189,19 @@
   min-width: 0;
 }
 
-.bcgt-indent {
+/* Tree connector prefix (├──/└──/│). Monospace + pre so the glyphs align into
+   clean vertical rails, like the `tree` command. */
+.bcgt-tree {
   flex: 0 0 auto;
-  width: calc(var(--depth, 0) * 1.5em);
-  margin-right: var(--size-4-1);
-  /* one vertical guide line at the start of each nesting level (the gradient
-     tiles every 1.5em across the spacer, so #lines == depth) */
-  background-image: repeating-linear-gradient(
-    to right,
-    var(--interactive-accent) 0 2px,
-    transparent 2px 1.5em
-  );
+  white-space: pre;
+  font-family: var(--font-monospace);
+  color: var(--text-muted);
+}
+
+/* Whole first column in monospace to match the tree look. */
+.bcgt-row > .bcgt-cell:first-child .bcgt-cell-content,
+.bcgt-subgroup-cell .bcgt-group-label {
+  font-family: var(--font-monospace);
 }
 
 /* Row-height presets: clamp the cell content to a fixed number of lines (like
@@ -400,10 +402,9 @@
 }
 
 /* Sub-group header: a band halfway between the top-group color and the row/
-   secondary color, so it's clearly distinct; indented by nesting depth. */
+   secondary color, so it's clearly distinct. Indent comes from the tree prefix. */
 .bcgt-subgroup-cell {
   padding: var(--size-4-1) var(--size-4-2);
-  padding-left: calc(var(--size-4-2) + var(--depth, 0) * 1.5em);
   background-color: color-mix(
     in srgb,
     var(--background-modifier-active-hover) 50%,

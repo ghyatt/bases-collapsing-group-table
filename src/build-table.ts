@@ -846,21 +846,22 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     renderValue(inner, entry, col)
   }
 
-  const renderDataRow = (tbody: HTMLElement, entry: BasesEntry, ancestors: string[]): void => {
+  const renderDataRow = (
+    tbody: HTMLElement,
+    entry: BasesEntry,
+    ancestors: string[],
+    treePrefix: string,
+  ): void => {
     const row = tbody.createEl('tr', { cls: 'bcgt-row' })
     rowMeta.push({ el: row, ancestors })
-    // Nesting depth = headers above this row (1 = directly under a top group).
-    const depth = ancestors.length
     columns.forEach((col, ci) => {
       const td = row.createEl('td', { cls: 'bcgt-cell' })
-      if (ci === 0 && depth > 1) {
-        // First cell of a nested row: flex row of [indent spacer | content].
-        // The spacer has a fixed width per level (reliable indent) and draws a
-        // guide line per level; content takes the rest.
+      if (ci === 0 && treePrefix) {
+        // First cell of a nested row: flex row of [tree connectors | content].
+        // The monospace prefix provides both the indent and the ├──/└──/│ glyphs.
         td.addClass('bcgt-rail')
         const wrap = td.createDiv('bcgt-firstcell')
-        const spacer = wrap.createDiv('bcgt-indent')
-        spacer.style.setProperty('--depth', String(depth - 1))
+        wrap.createSpan({ cls: 'bcgt-tree', text: treePrefix })
         renderCell(wrap, td, entry, col)
       } else {
         renderCell(td, td, entry, col)
@@ -878,6 +879,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     labelText: string,
     count: number,
     subCount: number,
+    treePrefix: string,
     labelValue?: Value | null,
   ): void => {
     allFoldKeys.add(foldKey)
@@ -886,8 +888,9 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     rowMeta.push({ el: tr, ancestors })
     const cell = tr.createEl('td', { cls: isTop ? 'bcgt-group-cell' : 'bcgt-subgroup-cell' })
     cell.colSpan = colCount
-    if (!isTop) cell.style.setProperty('--depth', String(depth))
     const inner = cell.createDiv('bcgt-group-inner')
+    // Tree connector prefix (├──/└──/│) drawn in monospace so it aligns.
+    if (treePrefix) inner.createSpan({ cls: 'bcgt-tree', text: treePrefix })
     const chevron = inner.createSpan('bcgt-chevron')
     setIcon(chevron, 'chevron-down')
     chevrons.push({ key: foldKey, el: chevron })
@@ -921,15 +924,21 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
   const nodeTotal = (node: TreeNode): number =>
     node.entries.length + [...node.children.values()].reduce((s, c) => s + nodeTotal(c), 0)
 
+  // Standard tree-prefix recursion: `prefix` is the accumulated "│  "/"   "
+  // segments for the ancestors; `isLast` marks this node as its parent's last
+  // child (└── vs ├──). Connectors are drawn only below the top band (depth>0).
   const renderNode = (
     tbody: HTMLElement,
     node: TreeNode,
     depth: number,
     ancestors: string[],
     labelPath: string[],
+    prefix: string,
+    isLast: boolean,
   ): void => {
     const segLabel = node.label === '__bcgt_none__' ? '(none)' : node.label
     const breadcrumb = [...labelPath, segLabel]
+    const treePrefix = depth === 0 ? '' : prefix + (isLast ? '└── ' : '├── ')
     renderHeader(
       tbody,
       depth,
@@ -938,12 +947,19 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
       breadcrumb.join(' → '),
       nodeTotal(node),
       node.children.size,
+      treePrefix,
     )
     const childAncestors = [...ancestors, node.key]
-    for (const child of node.children.values()) {
-      renderNode(tbody, child, depth + 1, childAncestors, breadcrumb)
-    }
-    for (const entry of node.entries) renderDataRow(tbody, entry, childAncestors)
+    const childPrefix = depth === 0 ? '' : prefix + (isLast ? '    ' : '│   ')
+    const kids = [...node.children.values()]
+    const total = kids.length + node.entries.length
+    kids.forEach((child, i) => {
+      renderNode(tbody, child, depth + 1, childAncestors, breadcrumb, childPrefix, i === total - 1)
+    })
+    node.entries.forEach((entry, j) => {
+      const last = kids.length + j === total - 1
+      renderDataRow(tbody, entry, childAncestors, childPrefix + (last ? '└── ' : '├── '))
+    })
   }
 
   if (isGrouped && settings.subGroup) {
@@ -991,10 +1007,11 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     }
     for (const root of roots.values()) {
       const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
-      renderNode(tbody, root, 0, [], [])
+      renderNode(tbody, root, 0, [], [], '', true)
     }
   } else {
-    // Flat: one tbody per Bases group (sub-grouping off, or no groupBy).
+    // Flat: one tbody per Bases group (sub-grouping off, or no groupBy). No tree
+    // connectors here — the empty prefix keeps rows un-railed.
     groups.forEach((group, gi) => {
       const topKey = keys[gi]
       const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
@@ -1002,10 +1019,10 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
       if (isGrouped) {
         const hasKey = group.hasKey() && group.key
         const labelStr = hasKey ? group.key!.toString() : '(none)'
-        renderHeader(tbody, 0, topKey, [], labelStr, group.entries.length, 0, hasKey ? group.key : null)
+        renderHeader(tbody, 0, topKey, [], labelStr, group.entries.length, 0, '', hasKey ? group.key : null)
         baseAncestors = [topKey]
       }
-      for (const entry of group.entries) renderDataRow(tbody, entry, baseAncestors)
+      for (const entry of group.entries) renderDataRow(tbody, entry, baseAncestors, '')
     })
   }
 
