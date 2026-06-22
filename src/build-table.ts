@@ -787,10 +787,15 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     })
   }
 
-  const renderCell = (td: HTMLElement, entry: BasesEntry, col: BasesPropertyId): void => {
-    // Content goes in an inner div so the row-height presets can line-clamp it
-    // without disturbing the table cell's own layout.
-    const inner = td.createDiv('bcgt-cell-content')
+  // Renders a cell's content into `host` (normally the <td>, but a flex wrapper
+  // for indented first cells). `cellTd` is the owning <td> for editable styling.
+  const renderCell = (
+    host: HTMLElement,
+    cellTd: HTMLElement,
+    entry: BasesEntry,
+    col: BasesPropertyId,
+  ): void => {
+    const inner = host.createDiv('bcgt-cell-content')
 
     // The file-name column renders as a clickable internal link to the note.
     if (col === 'file.name') {
@@ -825,14 +830,14 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
 
     // Chip editor for list (tags) note columns.
     if (editType === 'list') {
-      td.addClass('bcgt-cell-editable')
+      cellTd.addClass('bcgt-cell-editable')
       renderListEditable(inner, entry, col)
       return
     }
 
     // Click-to-edit for text/number/date note columns.
     if (editType === 'text' || editType === 'number' || editType === 'date') {
-      td.addClass('bcgt-cell-editable')
+      cellTd.addClass('bcgt-cell-editable')
       renderEditable(inner, entry, col, editType)
       return
     }
@@ -844,16 +849,22 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
   const renderDataRow = (tbody: HTMLElement, entry: BasesEntry, ancestors: string[]): void => {
     const row = tbody.createEl('tr', { cls: 'bcgt-row' })
     rowMeta.push({ el: row, ancestors })
-    // Nesting depth = headers above this row. The first cell draws one thin left
-    // accent bar per level (as a background, so cell content isn't reflowed).
+    // Nesting depth = headers above this row (1 = directly under a top group).
     const depth = ancestors.length
     columns.forEach((col, ci) => {
       const td = row.createEl('td', { cls: 'bcgt-cell' })
       if (ci === 0 && depth > 1) {
+        // First cell of a nested row: flex row of [indent spacer | content].
+        // The spacer has a fixed width per level (reliable indent) and draws a
+        // guide line per level; content takes the rest.
         td.addClass('bcgt-rail')
-        td.style.setProperty('--depth', String(depth - 1))
+        const wrap = td.createDiv('bcgt-firstcell')
+        const spacer = wrap.createDiv('bcgt-indent')
+        spacer.style.setProperty('--depth', String(depth - 1))
+        renderCell(wrap, td, entry, col)
+      } else {
+        renderCell(td, td, entry, col)
       }
-      renderCell(td, entry, col)
     })
   }
 

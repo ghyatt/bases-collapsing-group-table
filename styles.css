@@ -176,20 +176,30 @@
 /* Rows nested under a sub-group: indent the first cell by one step per nesting
    level (content actually shifts right), with one thin accent bar drawn at the
    start of each level's indent space — so text always clears the bars. */
-.bcgt-rail {
-  /* Indent the first cell one step (1.5em) per nesting level, and draw one
-     vertical guide line at the start of each level so depth is countable
-     (2 lines = level 2, 3 lines = level 3). Literal em only — a CSS var inside
-     the gradient doesn't substitute reliably. */
-  padding-left: calc(var(--depth, 0) * 1.5em + var(--size-4-2));
+/* Nested first cell: a flex row of [indent spacer | content]. The spacer's
+   fixed width gives a reliable per-level indent (table-cell padding-left wasn't
+   honored in fixed layout); guide lines are drawn on the spacer. */
+.bcgt-firstcell {
+  display: flex;
+  align-items: stretch;
+}
+
+.bcgt-firstcell > .bcgt-cell-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bcgt-indent {
+  flex: 0 0 auto;
+  width: calc(var(--depth, 0) * 1.5em);
+  margin-right: var(--size-4-1);
+  /* one vertical guide line at the start of each nesting level (the gradient
+     tiles every 1.5em across the spacer, so #lines == depth) */
   background-image: repeating-linear-gradient(
     to right,
     var(--interactive-accent) 0 2px,
     transparent 2px 1.5em
   );
-  background-repeat: no-repeat;
-  background-position: left top;
-  background-size: calc(var(--depth, 0) * 1.5em) 100%;
 }
 
 /* Row-height presets: clamp the cell content to a fixed number of lines (like
