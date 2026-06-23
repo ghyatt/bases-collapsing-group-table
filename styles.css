@@ -171,32 +171,28 @@
   vertical-align: top;
   color: var(--text-normal);
   overflow: hidden;
-  /* height:100% makes the cell's height definite (= row height) so the tree
-     rail's height:100% fills the whole row, not just the first cell's content
-     (a checkbox/number would otherwise make the rail one line tall). */
-  height: 100%;
 }
 
-/* Rows nested under a sub-group: indent the first cell by one step per nesting
-   level (content actually shifts right), with one thin accent bar drawn at the
-/* Railed first cell: drop vertical padding so the rail spans the cell edge-to-
-   edge (cells have overflow:hidden, which would clip any overhang) — this keeps
-   the verticals continuous between rows. The content carries the padding instead. */
+/* Railed first cell: relative box holding an absolutely-positioned rail (so the
+   rail spans the FULL row height regardless of this cell's own content — a
+   checkbox/number no longer shrinks it) and content shifted right past it. */
 .bcgt-rail {
+  position: relative;
   padding-top: 0;
   padding-bottom: 0;
 }
 
-/* Nested first cell: a flex row of [tree rail | content], full row height. */
-.bcgt-firstcell {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
+/* The rail fills the cell top-to-bottom; left aligns with the header rail. */
+.bcgt-rail > .bcgt-tree {
+  position: absolute;
+  left: var(--size-4-2);
+  top: 0;
+  bottom: 0;
 }
 
-.bcgt-firstcell > .bcgt-cell-content {
-  flex: 1 1 auto;
-  min-width: 0;
+/* Content clears the rail (--segs indent steps) and carries the row padding. */
+.bcgt-rail > .bcgt-cell-content {
+  margin-left: calc(var(--segs, 0) * 1.5em);
   padding-top: var(--size-4-1);
   padding-bottom: var(--size-4-1);
 }

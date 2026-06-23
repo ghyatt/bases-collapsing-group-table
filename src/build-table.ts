@@ -857,12 +857,13 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     columns.forEach((col, ci) => {
       const td = row.createEl('td', { cls: 'bcgt-cell' })
       if (ci === 0 && treePrefix) {
-        // First cell of a nested row: flex row of [tree connectors | content].
-        // The monospace prefix provides both the indent and the ├──/└──/│ glyphs.
+        // Nested row first cell: the rail is an absolutely-positioned full-height
+        // layer (so it fills the row height regardless of this cell's content),
+        // and the content is shifted right past it by --segs * one indent step.
         td.addClass('bcgt-rail')
-        const wrap = td.createDiv('bcgt-firstcell')
-        renderTreeRail(wrap, treePrefix)
-        renderCell(wrap, td, entry, col)
+        td.style.setProperty('--segs', String(treePrefix.length / 4))
+        renderTreeRail(td, treePrefix)
+        renderCell(td, td, entry, col)
       } else {
         renderCell(td, td, entry, col)
       }
