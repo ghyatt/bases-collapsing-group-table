@@ -175,13 +175,13 @@
 
 /* Rows nested under a sub-group: indent the first cell by one step per nesting
    level (content actually shifts right), with one thin accent bar drawn at the
-   start of each level's indent space — so text always clears the bars. */
-/* Nested first cell: a flex row of [indent spacer | content]. The spacer's
-   fixed width gives a reliable per-level indent (table-cell padding-left wasn't
-   honored in fixed layout); guide lines are drawn on the spacer. */
+/* Nested first cell: a flex row of [tree rail | content]. height:100% makes the
+   rail stretch to the full row height (tall image rows included) so the vertical
+   connectors don't leave gaps. */
 .bcgt-firstcell {
   display: flex;
   align-items: stretch;
+  height: 100%;
 }
 
 .bcgt-firstcell > .bcgt-cell-content {
@@ -189,13 +189,47 @@
   min-width: 0;
 }
 
-/* Tree connector prefix (├──/└──/│). Monospace + pre so the glyphs align into
-   clean vertical rails, like the `tree` command. */
+/* Tree connector rail: one full-height segment box per nesting level, with the
+   vertical/elbow lines drawn via borders so they span the whole row height and
+   align identically between sub-group headers and data rows. */
 .bcgt-tree {
   flex: 0 0 auto;
-  white-space: pre;
-  font-family: var(--font-monospace);
-  color: var(--text-muted);
+  align-self: stretch;
+  display: flex;
+}
+
+.bcgt-seg {
+  position: relative;
+  flex: 0 0 auto;
+  width: 1.5em;
+}
+
+/* full-height vertical line (continuation │, and the trunk of ├) */
+.bcgt-seg-v::before,
+.bcgt-seg-tee::before,
+.bcgt-seg-ell::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--background-modifier-border-focus);
+}
+
+/* └ : vertical only from the top down to the middle */
+.bcgt-seg-ell::before {
+  bottom: 50%;
+}
+
+/* ├ and └ : horizontal arm from the middle to the right edge */
+.bcgt-seg-tee::after,
+.bcgt-seg-ell::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  right: 0;
+  top: 50%;
+  border-top: 2px solid var(--background-modifier-border-focus);
 }
 
 /* Whole first column in monospace to match the tree look. */

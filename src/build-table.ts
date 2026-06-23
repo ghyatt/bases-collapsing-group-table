@@ -861,12 +861,28 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
         // The monospace prefix provides both the indent and the ├──/└──/│ glyphs.
         td.addClass('bcgt-rail')
         const wrap = td.createDiv('bcgt-firstcell')
-        wrap.createSpan({ cls: 'bcgt-tree', text: treePrefix })
+        renderTreeRail(wrap, treePrefix)
         renderCell(wrap, td, entry, col)
       } else {
         renderCell(td, td, entry, col)
       }
     })
+  }
+
+  // Build the tree connector rail from a prefix string (4-char units: "│   ",
+  // "    ", "├── ", "└── ") as full-height CSS segments — so verticals span the
+  // whole row height and headers/rows align identically. Returns nothing.
+  const renderTreeRail = (container: HTMLElement, prefix: string): void => {
+    if (!prefix) return
+    const rail = container.createDiv('bcgt-tree')
+    for (let i = 0; i < prefix.length; i += 4) {
+      const unit = prefix.slice(i, i + 4)
+      const seg = rail.createDiv('bcgt-seg')
+      if (unit === '│   ') seg.addClass('bcgt-seg-v')
+      else if (unit === '├── ') seg.addClass('bcgt-seg-tee')
+      else if (unit === '└── ') seg.addClass('bcgt-seg-ell')
+      // "    " → blank segment (just spacing)
+    }
   }
 
   // A collapsible header row (top group or, when depth > 0, a sub-group). Single
@@ -889,8 +905,8 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     const cell = tr.createEl('td', { cls: isTop ? 'bcgt-group-cell' : 'bcgt-subgroup-cell' })
     cell.colSpan = colCount
     const inner = cell.createDiv('bcgt-group-inner')
-    // Tree connector prefix (├──/└──/│) drawn in monospace so it aligns.
-    if (treePrefix) inner.createSpan({ cls: 'bcgt-tree', text: treePrefix })
+    // Tree connector rail (├──/└──/│) as full-height CSS segments.
+    renderTreeRail(inner, treePrefix)
     const chevron = inner.createSpan('bcgt-chevron')
     setIcon(chevron, 'chevron-down')
     chevrons.push({ key: foldKey, el: chevron })
