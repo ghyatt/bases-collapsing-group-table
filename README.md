@@ -1,12 +1,24 @@
+---
+parent:
+  - "[[dev]]"
+---
+
+
 # Collapsing Group Table
 
 _A Bases Table view that supports collapsable grouping._
 
-![collapsable groups](assets/collapsable_groups.jpg)
+![two level nested](assets/catelogy_2_level.jpg)
 
 A [Bases](https://obsidian.md/help/bases) Table view for [Obsidian](https://obsidian.md/) that turns grouped results into a **collapsible tree** — fold and unfold groups like branches, optional support for nested hierarchical groups from a single `/`-delimited property, and edit your notes inline.
 
-It adds a new Bases type that can be use in places of the Obsidian Bases Table view with one that supports collapsable row groups based off GroupBy column set in the Bases configuration.  It also supports optional nested categories, for example:  ”research/medical” and a number of new useful behaviors (example: accordion) .  It tries to be a drop-in replacement for the Obsidian Bases Table view… tries to be (since Obsidian did not provide an extendible BaseTable object, several things had to be code from scratch, so somethings may vary).
+It adds a new Bases type that can be use in places of the Obsidian Bases Table view with one that supports collapsable row groups based off GroupBy column set in the Bases configuration.
+
+![collapsable groups](assets/collapable.jpg)
+
+  It also supports optional nested categories, for example:  ”research/medical”  and a number of new useful behaviors (example: accordion) .  It tries to be a drop-in replacement for the Obsidian Bases Table view… tries to be (since Obsidian did not provide an extendible BaseTable object, several things had to be code from scratch, so somethings may vary).  If you turn on nested groupBy keys, then it support up to three levels of nesting (example “art/painting/water_color” )
+
+![3 level nesting test](assets/three_level_test.jpg)
 
 ## Requirements
 - [Obsidian](https://obsidian.md/) `(ver >= 1.10.2)` — the Bases core plugin must be available.
@@ -37,17 +49,14 @@ If no **Group by** is set, the view renders as a plain table. Which rows appear,
 - Group headers show an **entry-count** badge, and a **sub-group count** badge when a group has more than one sub-group.
 
 ### Nested groups (hierarchical `/` values)
-Turn on **Sub-group repeated values (nested groups)** and any group value containing `/` is split into a nested tree, to arbitrary depth. Sub-group headers and the rows beneath them are connected with `tree`-command-style connectors (`├──`, `└──`, `│`) that run the full height of each row, so the hierarchy reads at a glance. For example, grouping by a `category` whose values are `ai/llm_wiki`, `ai/tools`, `obsidian/plugin` produces:
+Turn on **Sub-group repeated values (nested groups)** and any group value containing `/` is split into a nested tree, to arbitrary depth. For example, grouping by a `category` whose values are `ai/llm_wiki`, `ai/tools`, `obsidian/plugin` produces:
 
 ```
 ▾ ai
-  ├── ▾ ai → llm_wiki
-  │   ├── bookBases.md
-  │   └── books.md
-  └── ▾ ai → tools
-      └── kokoro.md
+   ▾ ai → llm_wiki
+   ▾ ai → tools
 ▾ obsidian
-  └── ▾ obsidian → plugin
+   ▾ obsidian → plugin
 ```
 
 **When opening a group** controls what the sub-groups do on open (and on initial load): open the **first** sub-group, **all** of them, or **none**.
