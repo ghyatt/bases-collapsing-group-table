@@ -175,9 +175,15 @@
 
 /* Rows nested under a sub-group: indent the first cell by one step per nesting
    level (content actually shifts right), with one thin accent bar drawn at the
-/* Nested first cell: a flex row of [tree rail | content]. height:100% makes the
-   rail stretch to the full row height (tall image rows included) so the vertical
-   connectors don't leave gaps. */
+/* Railed first cell: drop vertical padding so the rail spans the cell edge-to-
+   edge (cells have overflow:hidden, which would clip any overhang) — this keeps
+   the verticals continuous between rows. The content carries the padding instead. */
+.bcgt-rail {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Nested first cell: a flex row of [tree rail | content], full row height. */
 .bcgt-firstcell {
   display: flex;
   align-items: stretch;
@@ -187,6 +193,8 @@
 .bcgt-firstcell > .bcgt-cell-content {
   flex: 1 1 auto;
   min-width: 0;
+  padding-top: var(--size-4-1);
+  padding-bottom: var(--size-4-1);
 }
 
 /* Tree connector rail: one full-height segment box per nesting level, with the
@@ -218,7 +226,7 @@
 
 /* └ : vertical only from the top down to the first text line */
 .bcgt-seg-ell::before {
-  bottom: calc(100% - 0.8em);
+  bottom: calc(100% - var(--size-4-1) - 0.6em);
 }
 
 /* ├ and └ : horizontal arm at the first text line (so it meets top-aligned
@@ -229,7 +237,7 @@
   position: absolute;
   left: 50%;
   right: 0;
-  top: 0.8em;
+  top: calc(var(--size-4-1) + 0.6em);
   border-top: 2px solid var(--background-modifier-border-focus);
 }
 
@@ -251,13 +259,11 @@
   overflow-wrap: anywhere;
 }
 
-/* Images fill the configured row height (1/3/6/12 lines) instead of staying a
-   single line; width scales with aspect, capped to the column. */
+/* Images fill the configured row height (1/3/6/12 lines); width follows aspect
+   and the cell clips any overflow (height-driven, not width-limited). */
 .bcgt-cell-content img {
   height: calc(var(--bcgt-lines, 1) * 1.6em);
   width: auto;
-  max-width: 100%;
-  object-fit: contain;
 }
 
 /* List/tag cells: a flex-wrap container can't live inside the -webkit-box clamp
@@ -445,9 +451,11 @@
 }
 
 /* Sub-group header: a band halfway between the top-group color and the row/
-   secondary color, so it's clearly distinct. Indent comes from the tree prefix. */
+   secondary color, so it's clearly distinct. Indent comes from the tree prefix.
+   Zero vertical padding (band height comes from the padded inner) so the tree
+   rail spans edge-to-edge and stays continuous with the rows below. */
 .bcgt-subgroup-cell {
-  padding: var(--size-4-1) var(--size-4-2);
+  padding: 0 var(--size-4-2);
   background-color: color-mix(
     in srgb,
     var(--background-modifier-active-hover) 50%,
@@ -456,6 +464,13 @@
   border-bottom: 1px solid var(--background-modifier-border-hover);
   font-weight: var(--font-medium);
   color: var(--text-normal);
+}
+
+/* Pad the label (not the inner) so the band keeps its height while the rail
+   still stretches to the full inner height (no top/bottom gap). */
+.bcgt-subgroup-cell .bcgt-group-label {
+  padding-top: var(--size-4-1);
+  padding-bottom: var(--size-4-1);
 }
 
 .bcgt-subgroup-header:hover .bcgt-subgroup-cell {

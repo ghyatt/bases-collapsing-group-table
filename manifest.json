@@ -1,7 +1,7 @@
 {
   "id": "bases-collapsing-group-table",
   "name": "Collapsing Group Table",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "minAppVersion": "1.10.2",
   "description": "A Bases table view whose groups collapse like a tree, with nested groups, inline editing, and tag/link autocomplete.",
   "author": "Gilbert Hyatt",
