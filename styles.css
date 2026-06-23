@@ -216,19 +216,20 @@
   border-left: 2px solid var(--background-modifier-border-focus);
 }
 
-/* └ : vertical only from the top down to the middle */
+/* └ : vertical only from the top down to the first text line */
 .bcgt-seg-ell::before {
-  bottom: 50%;
+  bottom: calc(100% - 0.8em);
 }
 
-/* ├ and └ : horizontal arm from the middle to the right edge */
+/* ├ and └ : horizontal arm at the first text line (so it meets top-aligned
+   content on tall rows), reaching to the right edge */
 .bcgt-seg-tee::after,
 .bcgt-seg-ell::after {
   content: '';
   position: absolute;
   left: 50%;
   right: 0;
-  top: 50%;
+  top: 0.8em;
   border-top: 2px solid var(--background-modifier-border-focus);
 }
 
@@ -250,9 +251,13 @@
   overflow-wrap: anywhere;
 }
 
+/* Images fill the configured row height (1/3/6/12 lines) instead of staying a
+   single line; width scales with aspect, capped to the column. */
 .bcgt-cell-content img {
-  max-height: calc(var(--bcgt-lines, 1) * 1.6em);
+  height: calc(var(--bcgt-lines, 1) * 1.6em);
   width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 /* List/tag cells: a flex-wrap container can't live inside the -webkit-box clamp
@@ -300,6 +305,10 @@
   line-clamp: none;
   max-height: none;
   overflow: visible;
+}
+
+.bcgt-rows-dynamic .bcgt-cell-content img {
+  height: auto;
 }
 
 .bcgt-rows-dynamic .bcgt-cell-content img {
