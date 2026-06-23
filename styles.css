@@ -226,7 +226,7 @@
 
 /* └ : vertical only from the top down to the first text line */
 .bcgt-seg-ell::before {
-  bottom: calc(100% - var(--size-4-1) - 0.6em);
+  bottom: calc(100% - var(--size-4-1) - 0.75em);
 }
 
 /* ├ and └ : horizontal arm at the first text line (so it meets top-aligned
@@ -237,7 +237,7 @@
   position: absolute;
   left: 50%;
   right: 0;
-  top: calc(var(--size-4-1) + 0.6em);
+  top: calc(var(--size-4-1) + 0.75em);
   border-top: 2px solid var(--background-modifier-border-focus);
 }
 
@@ -255,14 +255,19 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--bcgt-lines, 1);
   line-clamp: var(--bcgt-lines, 1);
+  /* Pinned line-height so the clamp height and the image height (below) use the
+     same per-line unit — otherwise the image is taller than N text lines and
+     grows the row past its configured height. */
+  line-height: 1.5;
   overflow: hidden;
   overflow-wrap: anywhere;
 }
 
-/* Images fill the configured row height (1/3/6/12 lines); width follows aspect
-   and the cell clips any overflow (height-driven, not width-limited). */
+/* Images fill the configured row height (1/3/6/12 lines) using the same 1.5em
+   per-line unit as the text clamp, so the image matches N text lines exactly
+   and doesn't grow the row. Width follows aspect; the cell clips any overflow. */
 .bcgt-cell-content img {
-  height: calc(var(--bcgt-lines, 1) * 1.6em);
+  height: calc(var(--bcgt-lines, 1) * 1.5em);
   width: auto;
 }
 
@@ -478,14 +483,12 @@
 }
 
 .bcgt-group-inner {
-  /* inline-flex so it sizes to its content (chevron + name + count) instead of
-     stretching across the full-width group cell; sticky-left keeps it visible
-     when the table is wider than the pane and scrolled horizontally. */
+  /* inline-flex so it sizes to its content (chevron + name + count). No sticky
+     positioning — it offset the header rail relative to the data-row rail and
+     broke the tree-line alignment (worse the deeper the nesting). */
   display: inline-flex;
   align-items: center;
   gap: var(--size-4-2);
-  position: sticky;
-  left: var(--size-4-2);
 }
 
 .bcgt-group-header:hover .bcgt-group-cell {
