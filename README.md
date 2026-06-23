@@ -37,14 +37,17 @@ If no **Group by** is set, the view renders as a plain table. Which rows appear,
 - Group headers show an **entry-count** badge, and a **sub-group count** badge when a group has more than one sub-group.
 
 ### Nested groups (hierarchical `/` values)
-Turn on **Sub-group repeated values (nested groups)** and any group value containing `/` is split into a nested tree, to arbitrary depth. For example, grouping by a `category` whose values are `ai/llm_wiki`, `ai/tools`, `obsidian/plugin` produces:
+Turn on **Sub-group repeated values (nested groups)** and any group value containing `/` is split into a nested tree, to arbitrary depth. Sub-group headers and the rows beneath them are connected with `tree`-command-style connectors (`├──`, `└──`, `│`) that run the full height of each row, so the hierarchy reads at a glance. For example, grouping by a `category` whose values are `ai/llm_wiki`, `ai/tools`, `obsidian/plugin` produces:
 
 ```
 ▾ ai
-   ▾ ai → llm_wiki
-   ▾ ai → tools
+  ├── ▾ ai → llm_wiki
+  │   ├── bookBases.md
+  │   └── books.md
+  └── ▾ ai → tools
+      └── kokoro.md
 ▾ obsidian
-   ▾ obsidian → plugin
+  └── ▾ obsidian → plugin
 ```
 
 **When opening a group** controls what the sub-groups do on open (and on initial load): open the **first** sub-group, **all** of them, or **none**.
