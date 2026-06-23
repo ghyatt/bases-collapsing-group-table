@@ -171,6 +171,10 @@
   vertical-align: top;
   color: var(--text-normal);
   overflow: hidden;
+  /* height:100% makes the cell's height definite (= row height) so the tree
+     rail's height:100% fills the whole row, not just the first cell's content
+     (a checkbox/number would otherwise make the rail one line tall). */
+  height: 100%;
 }
 
 /* Rows nested under a sub-group: indent the first cell by one step per nesting
