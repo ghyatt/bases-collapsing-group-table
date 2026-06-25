@@ -249,7 +249,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
       addStat('GroupedBy:', name, ' - ')
     }
 
-    if (settings.subGroup) {
+    if (settings.subGroup || settings.subCols.length > 0) {
       bar.createSpan({ cls: 'bcgt-stats bcgt-nested-tag', text: '[nested]' })
     }
   }
@@ -979,11 +979,50 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     })
   }
 
-  if (isGrouped && settings.subGroup) {
-    // Build the tree from group values, then render each top segment as a tbody.
+  if (isGrouped && (settings.subGroup || settings.subCols.length > 0)) {
+    // Internal separator for column-based fold keys (won't collide with "/" in
+    // values, since values are used whole).
+    const COLSEP = '\u0001'
+
+    // Partition a node's entries by the selected sub-group columns, one level per
+    // column. Column values are used WHOLE — never split on "/".
+    const partition = (node: TreeNode, entries: BasesEntry[], cols: string[]): void => {
+      if (cols.length === 0) {
+        node.entries.push(...entries)
+        return
+      }
+      const [col, ...rest] = cols
+      const buckets = new Map<string, BasesEntry[]>()
+      const order: string[] = []
+      for (const e of entries) {
+        const v = valueOf(e, col as BasesPropertyId)
+        const k = v === null ? '__bcgt_none__' : v.toString()
+        let bucket = buckets.get(k)
+        if (!bucket) {
+          bucket = []
+          buckets.set(k, bucket)
+          order.push(k)
+        }
+        bucket.push(e)
+      }
+      for (const k of order) {
+        const childKey = node.key + COLSEP + k
+        const child: TreeNode = { key: childKey, label: k, children: new Map(), entries: [] }
+        node.children.set(childKey, child)
+        partition(child, buckets.get(k) ?? [], rest)
+      }
+    }
+
+    // Exclusive: "/" split and column sub-grouping never combine — when the split
+    // toggle is on, the column pickers are ignored.
+    const cols = settings.subGroup ? [] : settings.subCols
+    // Build the tree from group values (split on "/" only when the toggle is on),
+    // then partition each group's entries by the selected sub-group columns.
     const roots = new Map<string, TreeNode>()
     groups.forEach((group, gi) => {
-      const segs = keys[gi].split(SEP).map((s) => s.trim()).filter((s) => s.length > 0)
+      const segs = settings.subGroup
+        ? keys[gi].split(SEP).map((s) => s.trim()).filter((s) => s.length > 0)
+        : [keys[gi]]
       if (segs.length === 0) segs.push(keys[gi])
       let level = roots
       let prefix = ''
@@ -997,7 +1036,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
         }
         level = node.children
       }
-      if (node) node.entries.push(...group.entries)
+      if (node) partition(node, group.entries, cols)
     })
     topLevelKeys = [...roots.keys()]
     // Record tree relationships for the open/close behaviors.

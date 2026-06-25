@@ -9,9 +9,11 @@ export interface TableSettings {
   startCollapsed: boolean
   // Show the entry count beside each group header.
   showCount: boolean
-  // Recursively sub-group rows within a group by repeated leading-column values
-  // (a value shared by 2+ rows becomes a collapsible "Group → value" sub-group).
+  // Split the groupBy value on "/" into a nested tree.
   subGroup: boolean
+  // Additional properties to sub-group by, in order (each adds one nesting level
+  // below the groupBy). Values are used whole — NOT split on "/".
+  subCols: string[]
   // What happens to sub-groups when a group is opened: 'first' (open the first
   // sub-group), 'all' (open all), or 'none' (keep them collapsed).
   openBehavior: string

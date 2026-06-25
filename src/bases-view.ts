@@ -67,11 +67,12 @@ export class GroupTableView extends BasesView {
       ? Array.from(new Set(allKeys.map((k) => k.split('/')[0])))
       : allKeys
 
-    // 'sg' in the signature: toggling sub-grouping changes the whole fold-key
-    // scheme (segments vs full values), so saved folds shouldn't carry over.
+    // The signature ties saved folds to the options that change the fold-key
+    // scheme (split toggle + chosen sub-group columns), so they don't carry over
+    // when those change.
     const sig =
       `${settings.accordion ? 'acc' : ''}|${settings.startCollapsed ? 'sc' : ''}` +
-      `|${settings.subGroup ? 'sg' : ''}`
+      `|${settings.subGroup ? 'sg' : ''}|${settings.subCols.join(',')}`
     // applyOpenDefault: true when we're showing the option-driven default (no
     // saved folds) — buildTable then initialises sub-groups per "when opening a
     // group". When restoring saved folds, we leave them as-is.
@@ -140,11 +141,23 @@ export class GroupTableView extends BasesView {
       // default true
       showCount: this.config.get('showCount') !== false,
       subGroup: this.config.get('subGroup') === true,
+      subCols: this.readSubCols(),
       openBehavior: typeof this.config.get('openBehavior') === 'string'
         ? (this.config.get('openBehavior') as string)
         : 'first',
       dateFormat: typeof df === 'string' ? df.trim() : '',
     }
+  }
+
+  // The selected sub-group property ids, in level order (2nd, 3rd), skipping
+  // unset ones so a 3rd-level pick still works if the 2nd is set.
+  private readSubCols(): string[] {
+    const cols: string[] = []
+    for (const key of ['subCol1', 'subCol2']) {
+      const p = this.config.getAsPropertyId(key)
+      if (p) cols.push(p)
+    }
+    return cols
   }
 
   // Saved folds if they match the current option-signature, else null. Keeps all

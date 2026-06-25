@@ -1,4 +1,4 @@
-import { BasesAllOptions, Plugin } from 'obsidian'
+import { BasesAllOptions, BasesViewConfig, Plugin } from 'obsidian'
 import { GroupTableView, VIEW_TYPE } from './bases-view'
 
 export default class CollapsingGroupTablePlugin extends Plugin {
@@ -7,7 +7,10 @@ export default class CollapsingGroupTablePlugin extends Plugin {
       name: 'Collapsing group table',
       icon: 'lucide-list-tree',
       factory: (controller, containerEl) => new GroupTableView(controller, containerEl),
-      options: (): BasesAllOptions[] => {
+      options: (config: BasesViewConfig): BasesAllOptions[] => {
+        // The "/" split and the column pickers are mutually exclusive: when the
+        // split toggle is on, hide (and ignore) the column pickers.
+        const splitOn = (): boolean => config.get('subGroup') === true
         return [
           {
             type: 'dropdown',
@@ -42,9 +45,21 @@ export default class CollapsingGroupTablePlugin extends Plugin {
           },
           {
             type: 'toggle',
-            displayName: 'Sub-group repeated values (nested groups)',
+            displayName: 'Split group value on "/" into nested groups',
             key: 'subGroup',
             default: false,
+          },
+          {
+            type: 'property',
+            displayName: 'Sub-group by (2nd level)',
+            key: 'subCol1',
+            shouldHide: () => splitOn(),
+          },
+          {
+            type: 'property',
+            displayName: 'Sub-group by (3rd level)',
+            key: 'subCol2',
+            shouldHide: () => splitOn() || !config.getAsPropertyId('subCol1'),
           },
           {
             type: 'dropdown',
