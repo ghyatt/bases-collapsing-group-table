@@ -520,8 +520,10 @@
    Neutral colour so it reads distinctly from the accent entry-count badge. */
 .bcgt-subgroup-tally {
   flex: 0 0 auto;
-  min-width: 3ch;
-  text-align: right;
+  box-sizing: content-box;
+  min-width: 1ch;
+  text-align: center;
+  white-space: nowrap;
   color: var(--text-muted);
   background-color: var(--background-modifier-border);
   border-radius: var(--radius-s);
@@ -533,10 +535,13 @@
 
 .bcgt-group-count {
   flex: 0 0 auto;
-  /* Fixed-width, right-aligned column so every count's right edge lines up and
-     the names after them start at the same x across all groups. */
-  width: 3ch;
-  text-align: right;
+  /* min-width keeps single digits tidy; grows for multi-digit counts. nowrap +
+     content-box stop a 2+ digit number from wrapping to a second line (which
+     was making the row taller). */
+  box-sizing: content-box;
+  min-width: 1ch;
+  text-align: center;
+  white-space: nowrap;
   color: var(--text-on-accent);
   background-color: var(--interactive-accent);
   border-radius: var(--radius-s);
