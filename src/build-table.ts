@@ -17,6 +17,7 @@ import {
   setIcon,
 } from 'obsidian'
 import type { TableSettings } from './types'
+import { buildGroupTree, cleanLabel, groupByNames, nodeTotal, type TreeNode } from './group-tree'
 
 // Inline-editable note-property types (written back to frontmatter).
 type EditType = 'bool' | 'number' | 'date' | 'text' | 'list'
@@ -31,12 +32,6 @@ const rowLines = (rowHeight: string): number =>
 // metadataCache.getTags() exists at runtime but isn't in the public typings.
 interface MetadataCacheWithTags {
   getTags?: () => Record<string, number>
-}
-
-// The view config's built-in groupBy field isn't in the public typings (it lives
-// alongside, not inside, the custom-options bag that config.get() reads).
-interface ConfigWithGroupBy {
-  groupBy?: { property?: string; direction?: string }
 }
 
 // Autocomplete popover for a list cell's add-input: vault tags or page links,
@@ -87,7 +82,7 @@ class ListSuggest extends AbstractInputSuggest<string> {
   }
 }
 
-interface BuildTableArgs {
+export interface BuildTableArgs {
   app: App
   groups: BasesEntryGroup[]
   columns: BasesPropertyId[]
@@ -237,20 +232,12 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     addStat('Groups:', String(groupCount), '')
     addStat('Notes:', String(noteCount), ' · ')
 
-    // Grouped-by property name (read from the built-in groupBy config field).
-    const prop = (config as unknown as ConfigWithGroupBy).groupBy?.property
-    if (typeof prop === 'string' && prop.length > 0) {
-      let name = prop
-      try {
-        name = config.getDisplayName(prop as BasesPropertyId)
-      } catch {
-        /* fall back to the raw property id */
-      }
-      addStat('GroupedBy:', name, ' - ')
-    }
-
-    if (settings.subGroup || settings.subCols.length > 0) {
-      bar.createSpan({ cls: 'bcgt-stats bcgt-nested-tag', text: '[nested]' })
+    // GroupBy: always shown when grouped — the Base's groupBy column plus any
+    // sub-group columns chosen in the dialog.
+    const gbNames = groupByNames(config, settings.subCols)
+    addStat('GroupBy:', gbNames.join(', ') || '—', ' - ')
+    if (settings.subGroup) {
+      statsEl.createSpan({ cls: 'bcgt-nested-tag', text: ' [nested]' })
     }
   }
 
@@ -932,15 +919,6 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
   }
 
   // ---- Option X: split each group value on '/' into a nested tree ----
-  interface TreeNode {
-    key: string // full path prefix, e.g. "ai/llm_wiki" (also the fold key)
-    label: string // this segment, e.g. "llm_wiki"
-    children: Map<string, TreeNode>
-    entries: BasesEntry[]
-  }
-  const nodeTotal = (node: TreeNode): number =>
-    node.entries.length + [...node.children.values()].reduce((s, c) => s + nodeTotal(c), 0)
-
   // Standard tree-prefix recursion: `prefix` is the accumulated "│  "/"   "
   // segments for the ancestors; `isLast` marks this node as its parent's last
   // child (└── vs ├──). Connectors are drawn only below the top band (depth>0).
@@ -953,7 +931,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     prefix: string,
     isLast: boolean,
   ): void => {
-    const segLabel = node.label === '__bcgt_none__' ? '(none)' : node.label
+    const segLabel = node.label === '__bcgt_none__' ? '(none)' : cleanLabel(node.label)
     const breadcrumb = [...labelPath, segLabel]
     const treePrefix = depth === 0 ? '' : prefix + (isLast ? '└── ' : '├── ')
     renderHeader(
@@ -980,75 +958,17 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
   }
 
   if (isGrouped && (settings.subGroup || settings.subCols.length > 0)) {
-    // Internal separator for column-based fold keys (won't collide with "/" in
-    // values, since values are used whole).
-    const COLSEP = '\u0001'
-
-    // Partition a node's entries by the selected sub-group columns, one level per
-    // column. Column values are used WHOLE — never split on "/".
-    const partition = (node: TreeNode, entries: BasesEntry[], cols: string[]): void => {
-      if (cols.length === 0) {
-        node.entries.push(...entries)
-        return
-      }
-      const [col, ...rest] = cols
-      const buckets = new Map<string, BasesEntry[]>()
-      const order: string[] = []
-      for (const e of entries) {
-        const v = valueOf(e, col as BasesPropertyId)
-        const k = v === null ? '__bcgt_none__' : v.toString()
-        let bucket = buckets.get(k)
-        if (!bucket) {
-          bucket = []
-          buckets.set(k, bucket)
-          order.push(k)
-        }
-        bucket.push(e)
-      }
-      for (const k of order) {
-        const childKey = node.key + COLSEP + k
-        const child: TreeNode = { key: childKey, label: k, children: new Map(), entries: [] }
-        node.children.set(childKey, child)
-        partition(child, buckets.get(k) ?? [], rest)
-      }
-    }
-
-    // Exclusive: "/" split and column sub-grouping never combine — when the split
-    // toggle is on, the column pickers are ignored.
-    const cols = settings.subGroup ? [] : settings.subCols
-    // Build the tree from group values (split on "/" only when the toggle is on),
-    // then partition each group's entries by the selected sub-group columns.
-    const roots = new Map<string, TreeNode>()
-    groups.forEach((group, gi) => {
-      const segs = settings.subGroup
-        ? keys[gi].split(SEP).map((s) => s.trim()).filter((s) => s.length > 0)
-        : [keys[gi]]
-      if (segs.length === 0) segs.push(keys[gi])
-      let level = roots
-      let prefix = ''
-      let node: TreeNode | undefined
-      for (const seg of segs) {
-        prefix = prefix ? `${prefix}${SEP}${seg}` : seg
-        node = level.get(prefix)
-        if (!node) {
-          node = { key: prefix, label: seg, children: new Map(), entries: [] }
-          level.set(prefix, node)
-        }
-        level = node.children
-      }
-      if (node) partition(node, group.entries, cols)
+    // Build the grouped tree + relationship maps (shared, view-agnostic core).
+    const { roots, topLevelKeys: tlk } = buildGroupTree({
+      groups,
+      keys,
+      settings,
+      sep: SEP,
+      valueOf,
+      directChildren,
+      descendants,
     })
-    topLevelKeys = [...roots.keys()]
-    // Record tree relationships for the open/close behaviors.
-    const collect = (node: TreeNode): string[] => {
-      const kids = [...node.children.values()]
-      directChildren.set(node.key, kids.map((k) => k.key))
-      const all: string[] = []
-      for (const c of kids) all.push(c.key, ...collect(c))
-      descendants.set(node.key, all)
-      return all
-    }
-    for (const root of roots.values()) collect(root)
+    topLevelKeys = tlk
     // Initialise sub-group folds per "when opening a group" for the default
     // (unsaved) state: open top groups get the open-behavior applied; collapsed
     // ones have their descendants collapsed too.
@@ -1061,7 +981,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
         }
       }
     }
-    for (const root of roots.values()) {
+    for (const root of roots) {
       const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
       renderNode(tbody, root, 0, [], [], '', true)
     }
@@ -1074,8 +994,8 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
       let baseAncestors: string[] = []
       if (isGrouped) {
         const hasKey = group.hasKey() && group.key
-        const labelStr = hasKey ? group.key!.toString() : '(none)'
-        renderHeader(tbody, 0, topKey, [], labelStr, group.entries.length, 0, '', hasKey ? group.key : null)
+        const labelStr = hasKey ? cleanLabel(group.key!.toString()) : '(none)'
+        renderHeader(tbody, 0, topKey, [], labelStr, group.entries.length, 0, '')
         baseAncestors = [topKey]
       }
       for (const entry of group.entries) renderDataRow(tbody, entry, baseAncestors, '')

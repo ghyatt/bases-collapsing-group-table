@@ -6,17 +6,19 @@ parent:
 
 # Collapsing Group Table
 
-_A Bases Table view that supports collapsable grouping._
+_Bases Table & Card views that support collapsable grouping._
 
 ![two level nested](assets/catelogy_2_level.jpg)
 
-A [Bases](https://obsidian.md/help/bases) Table view for [Obsidian](https://obsidian.md/) that turns grouped results into a **collapsible tree** — fold and unfold groups like branches, optional support for nested hierarchical groups from a single `/`-delimited property, and edit your notes inline.
+![card replaces](assets/collapsable_cards.jpg)
 
-It adds a new Bases type that can be use in places of the Obsidian Bases Table view with one that supports collapsable row groups based off GroupBy column set in the Bases configuration.
+Two [Bases](https://obsidian.md/help/bases) Table and Card view for [Obsidian](https://obsidian.md/) that turns grouped results into a **collapsible tree** — fold and unfold groups like branches, optional support for nested hierarchical groups from a single `/`-delimited property, and edit your notes inline.
+
+It adds new Bases and Card types that can be use in places of the Obsidian Bases Table and Card views with one that supports collapsable row groups based off GroupBy column set in the Bases configuration.
 
 ![collapsable groups](assets/collapable.jpg)
 
-  It also supports optional nested categories, for example:  ”research/medical”  and a number of new useful behaviors (example: accordion) .  It tries to be a drop-in replacement for the Obsidian Bases Table view… tries to be (since Obsidian did not provide an extendible BaseTable object, several things had to be code from scratch, so somethings may vary).  If you turn on nested groupBy keys, then it support up to three levels of nesting (example “art/painting/water_color” )
+  They also supports optional nested categories, for example:  ”research/medical”  or multiple columns and a number of new useful behaviors (example: accordion) .  It tries to be a drop-in replacement for both the Obsidian Bases Table and Card views… tries to be (since Obsidian did not provide an extendible BaseTable object, several things had to be code from scratch, so somethings may vary).  If you turn on nested groupBy keys, then it support up to multiple levels of nesting (example “art/painting/water_color” )
 
 ![3 level nesting test](assets/three_level_test.jpg)
 
@@ -35,34 +37,40 @@ Search for **Collapsing Group Table** in Settings → Community plugins → Brow
 
 ## Usage
 1. Create or open a Base.
-2. Add a view and choose **Collapsing group table**.
+2. Add a view and choose **Collapsing group table** or **Collapsing group cards**.
 3. Set a **Group by** property in the Base's view options — this becomes the foldable branch.
 4. Click a group header (or its chevron) to fold/unfold it.
 
-If no **Group by** is set, the view renders as a plain table. Which rows appear, the column order, and the sort all come from the **Base's own** settings.
+If no **Group by** is set, the view renders as a plain table / card grid. Which rows appear, the column order, and the sort all come from the **Base's own** settings.
 
 ## Collapsing & groups
 - **Click a group header** — collapse or expand that group; closing a group also closes its sub-groups.
-- **Expand all / Collapse all** — buttons in the control bar (which also shows **Groups**, **Notes**, the **GroupedBy** property, and a `[nested]` tag).
+- **Expand all / Collapse all** — buttons in the control bar (which also shows **Groups**, **Notes**, the **GroupBy** columns, and a `[nested]` tag).
 - **Accordion mode** — expanding one top group collapses the others (only one open at a time).
 - **Start with groups collapsed** — open with everything folded.
 - Group headers show an **entry-count** badge, and a **sub-group count** badge when a group has more than one sub-group.
 
-### Nested groups (hierarchical `/` values)
-Turn on **Sub-group repeated values (nested groups)** and any group value containing `/` is split into a nested tree, to arbitrary depth. For example, grouping by a `category` whose values are `ai/llm_wiki`, `ai/tools`, `obsidian/plugin` produces:
+### Nested groups
+There are two ways to nest, and they're mutually exclusive. Sub-group headers and the rows beneath them are joined with `tree`-command-style connectors (`├──`, `└──`, `│`).
+
+**Split group value on "/"** — turn on the toggle and any group value containing `/` becomes a nested tree, to multiple levels. e.g. grouping by a `category` of `ai/llm_wiki`, `ai/tools`, `obsidian/plugin`:
 
 ```
 ▾ ai
-   ▾ ai → llm_wiki
-   ▾ ai → tools
+  ├── ▾ ai → llm_wiki
+  │   ├── bookBases.md
+  │   └── books.md
+  └── ▾ ai → tools
 ▾ obsidian
-   ▾ obsidian → plugin
+  └── ▾ obsidian → plugin
 ```
+
+**Sub-group by columns** — instead of the `/` split, pick **Sub-group by (2nd level)** / **(3rd level)** properties to nest by those columns (values used whole, never split).
 
 **When opening a group** controls what the sub-groups do on open (and on initial load): open the **first** sub-group, **all** of them, or **none**.
 
-## Inline editing
-Click a cell backed by a note property to edit it; changes are written to the note's frontmatter.
+## Inline editing (table view)
+In the table view, click a cell backed by a note property to edit it; changes are written to the note's frontmatter.
 
 - **Checkbox** — boolean properties render an editable checkbox.
 - **Text** — opens a multi-line editor sized to the row height.
@@ -78,18 +86,47 @@ Click a cell backed by a note property to edit it; changes are written to the no
 
 Your fold state and column widths are saved into the `.base` file, so they survive reloads.
 
-## Configuration
-All options are set from the Base **view configuration** menu.
+## Cards view
+The **Collapsing group cards** view renders entries as cards (cover image + title + fields) with the same collapsible grouping, nesting, and accordion behaviour. It reads the built-in Cards view's settings (`image`, `cardSize`, `imageAspectRatio`, `imageFit`), so an existing `type: cards` view can be switched over — or set them via the view options:
 
-| Option                                    | Default            | Description                                          |
-| ----------------------------------------- | ------------------ | ---------------------------------------------------- |
-| Row height                                | Short              | Short / Medium / Tall / Extra tall / Dynamic.        |
-| Accordion mode                            | off                | Expanding a top group collapses the others.          |
-| Start with groups collapsed               | off                | Open with all groups folded.                         |
-| Show entry count on group headers         | on                 | Show the entry-count badge.                          |
-| Sub-group repeated values (nested groups) | off                | Split `/`-delimited group values into a nested tree. |
-| When opening a group                      | First sub-group    | On open, expand the first / all / no sub-groups.     |
-| Date format                               | (Obsidian default) | moment.js tokens applied to date cells.              |
+- **Card image property** — the property used as the cover.
+- **Card width** — card size in px.
+- **Image fit** — `cover` (crop to fill) or `contain` (whole image), paired with **Image aspect ratio** (height ÷ width; 0 = natural) for uniform covers.
+- **Filename** — show below the cover, hide, or overlay on the cover (revealed on hover).
+
+The cover and filename are clickable to open the note.
+
+## Configuration
+All options are set from the Base **view configuration** menu, organized into sections.
+
+**Grouping & nesting** (both views)
+
+| Option | Default | Description |
+| --- | --- | --- |
+| Accordion mode | off | Expanding a top group collapses the others. |
+| Start with groups collapsed | off | Open with all groups folded. |
+| Show entry count on group headers | on | Show the entry-count badge. |
+| Split group value on "/" into nested groups | off | Split `/`-delimited group values into a nested tree. |
+| Sub-group by (2nd / 3rd level) | — | Nest by additional columns (mutually exclusive with the "/" split). |
+| When opening a group | First sub-group | On open, expand the first / all / no sub-groups. |
+
+**Table**
+
+| Option | Default | Description |
+| --- | --- | --- |
+| Row height | Short | Short / Medium / Tall / Extra tall / Dynamic. |
+| Date format | (Obsidian default) | moment.js tokens applied to date cells. |
+
+**Cards**
+
+| Option | Default | Description |
+| --- | --- | --- |
+| Card image property | — | Property used as the cover. |
+| Card width | 240 px | Card width. |
+| Filename | Show | Show below image / Hide / Overlay on hover. |
+| Image fit | Cover | Cover (crop to fill) or Contain (whole image). |
+| Image aspect ratio | 0 (natural) | Height ÷ width for uniform covers. |
+| Date format | (Obsidian default) | moment.js tokens applied to date fields. |
 
 ## License
 [MIT](LICENSE) — provided as is. File bugs or feature requests on [GitHub](https://github.com/ghyatt/bases-collapsing-group-table/issues).

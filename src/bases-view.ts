@@ -1,9 +1,11 @@
-import { BasesView, debounce, QueryController } from 'obsidian'
-import buildTable from './build-table'
+import { BasesView, BasesPropertyId, debounce, QueryController } from 'obsidian'
+import buildTable, { type BuildTableArgs } from './build-table'
+import buildCards from './build-cards'
 import renderError from './render-error'
 import type { TableSettings } from './types'
 
 export const VIEW_TYPE = 'collapsing-group-table'
+export const VIEW_TYPE_CARDS = 'collapsing-group-cards'
 
 // View-config key holding the saved fold state: { sig, keys }. `sig` ties the
 // saved folds to the accordion/start-collapsed options so changing those
@@ -11,7 +13,7 @@ export const VIEW_TYPE = 'collapsing-group-table'
 const FOLD_KEY = 'foldState'
 
 export class GroupTableView extends BasesView {
-  readonly type = VIEW_TYPE
+  readonly type: string = VIEW_TYPE
 
   private viewContainerEl: HTMLElement
   // Session fold state; build-table mutates it in place.
@@ -44,10 +46,10 @@ export class GroupTableView extends BasesView {
       return
     }
 
-    // Columns: the user-configured order, falling back to every visible property.
-    let columns = this.config.getOrder()
-    if (columns.length === 0) columns = this.data.properties
-    if (columns.length === 0) {
+    // Columns to render. Table requires at least one (a column-less table is
+    // pointless); cards allow none (covers/titles still show). null = abort.
+    const columns = this.resolveColumns()
+    if (columns === null) {
       renderError(this.viewContainerEl, 'Add at least one property (column) to this view.')
       return
     }
@@ -102,7 +104,7 @@ export class GroupTableView extends BasesView {
     // Guard the whole render so an unexpected error shows a message instead of
     // leaving a broken/blank view.
     try {
-      buildTable(this.viewContainerEl, {
+      this.build(this.viewContainerEl, {
         app: this.app,
         groups,
         columns,
@@ -120,8 +122,21 @@ export class GroupTableView extends BasesView {
         },
       })
     } catch (e) {
-      renderError(this.viewContainerEl, `Could not render the table: ${String(e)}`)
+      renderError(this.viewContainerEl, `Could not render the view: ${String(e)}`)
     }
+  }
+
+  // The renderer — overridden by the cards view. Default is the table.
+  protected build(container: HTMLElement, args: BuildTableArgs): void {
+    buildTable(container, args)
+  }
+
+  // Columns to display. Table: the configured order, falling back to all visible
+  // properties; null (abort) when there are none. Cards override to allow none.
+  protected resolveColumns(): BasesPropertyId[] | null {
+    let columns = this.config.getOrder()
+    if (columns.length === 0) columns = this.data.properties
+    return columns.length === 0 ? null : columns
   }
 
   onunload(): void {
@@ -187,5 +202,21 @@ export class GroupTableView extends BasesView {
   private persistFold(): void {
     if (this.collapsed === null || !this.viewContainerEl.isConnected) return
     this.config.set(FOLD_KEY, { sig: this.collapseSig, keys: Array.from(this.collapsed) })
+  }
+}
+
+// Card layout — shares all the grouping/fold/persistence plumbing above; only
+// the renderer differs.
+export class GroupCardsView extends GroupTableView {
+  readonly type: string = VIEW_TYPE_CARDS
+
+  protected build(container: HTMLElement, args: BuildTableArgs): void {
+    buildCards(container, args)
+  }
+
+  // Cards show covers/titles even with no fields, so don't require columns and
+  // don't fall back to all properties — use the configured order as-is.
+  protected resolveColumns(): BasesPropertyId[] {
+    return this.config.getOrder()
   }
 }
