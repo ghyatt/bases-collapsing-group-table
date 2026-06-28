@@ -12,7 +12,12 @@ export default class CollapsingGroupTablePlugin extends Plugin {
   data: PluginData = {}
 
   async onload() {
-    this.data = (await this.loadData()) ?? {}
+    // loadData() is typed `any`; read known fields defensively into our shape
+    // rather than assigning the any value directly.
+    const raw = (await this.loadData()) as Record<string, unknown> | null
+    this.data = {}
+    if (raw && typeof raw.lastVersion === 'string') this.data.lastVersion = raw.lastVersion
+    if (raw && typeof raw.showChangelog === 'boolean') this.data.showChangelog = raw.showChangelog
     this.addSettingTab(new CgtSettingTab(this.app, this))
     // Show "what's new" once after an update (not on first install), if enabled.
     const current = this.manifest.version
