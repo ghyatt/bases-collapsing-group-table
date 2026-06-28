@@ -1,6 +1,6 @@
 {
   "name": "bases-collapsing-group-table",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Bases table view with collapsible, tree-like groups for Obsidian",
   "main": "main.js",
   "scripts": {
