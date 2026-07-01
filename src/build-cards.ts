@@ -1,6 +1,7 @@
-import { BasesEntry, BasesPropertyId, DateValue, moment, setIcon, TFile, Value } from 'obsidian'
+import { BasesEntry, BasesPropertyId, DateValue, setIcon, TFile, Value } from 'obsidian'
 import { buildGroupTree, cleanLabel, groupByNames, nodeTotal, type TreeNode } from './group-tree'
 import type { BuildTableArgs } from './build-table'
+import { formatDate } from './format-date'
 
 // Card-specific config — our own options (config.get/getAsPropertyId) plus the
 // built-in Cards view's top-level fields (image/cardSize/imageAspectRatio) so a
@@ -112,9 +113,9 @@ const buildCards = (container: HTMLElement, args: BuildTableArgs): void => {
     if (value === null) return
     try {
       if (dateFormat && value instanceof DateValue) {
-        const m = moment(value.toString())
-        if (m.isValid()) {
-          el.setText(m.format(dateFormat))
+        const formatted = formatDate(value.toString(), dateFormat)
+        if (formatted !== null) {
+          el.setText(formatted)
           return
         }
       }

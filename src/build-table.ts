@@ -13,11 +13,11 @@ import {
   NumberValue,
   StringValue,
   Value,
-  moment,
   setIcon,
 } from 'obsidian'
 import type { TableSettings } from './types'
 import { buildGroupTree, cleanLabel, groupByNames, nodeTotal, type TreeNode } from './group-tree'
+import { formatDate } from './format-date'
 
 // Inline-editable note-property types (written back to frontmatter).
 type EditType = 'bool' | 'number' | 'date' | 'text' | 'list'
@@ -258,7 +258,11 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     const raw = config.get('columnSize')
     const out: Record<string, number> = {}
     if (raw && typeof raw === 'object') {
-      for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+      // Index access needs the record shape (plain `object` has no index
+      // signature), so this assertion is load-bearing, not redundant.
+      const obj = raw as Record<string, unknown>
+      for (const key of Object.keys(obj)) {
+        const val = obj[key]
         if (typeof val === 'number' && Number.isFinite(val)) out[key] = val
       }
     }
@@ -509,9 +513,9 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     if (value === null) return
     try {
       if (settings.dateFormat && value instanceof DateValue) {
-        const m = moment(value.toString())
-        if (m.isValid()) {
-          el.setText(m.format(settings.dateFormat))
+        const formatted = formatDate(value.toString(), settings.dateFormat)
+        if (formatted !== null) {
+          el.setText(formatted)
           return
         }
       }
@@ -526,8 +530,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     const value = valueOf(entry, col)
     if (value === null) return ''
     if (type === 'date') {
-      const m = moment(value.toString())
-      return m.isValid() ? m.format('YYYY-MM-DD') : ''
+      return formatDate(value.toString(), 'YYYY-MM-DD') ?? ''
     }
     return value.toString()
   }
