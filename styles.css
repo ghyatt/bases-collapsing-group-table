@@ -741,3 +741,65 @@
 .bcgt-card-grid.bcgt-hidden {
   display: none;
 }
+
+/* -------------------------------------------------------------------------
+   Card badges — up to 4 colored pills stacked at the card's top-right. Each
+   configured slot reserves a row so a given column keeps a fixed position
+   across cards; the per-slot symbol + colour make slots distinguishable.
+   ------------------------------------------------------------------------- */
+.bcgt-card {
+  position: relative;
+}
+.bcgt-card-badges {
+  position: absolute;
+  top: var(--size-4-1);
+  right: var(--size-4-1);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--size-4-1);
+  max-width: 88%;
+  pointer-events: none;
+}
+.bcgt-badge-slot {
+  display: flex;
+  align-items: center;
+  min-height: 1.35em;
+}
+.bcgt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  max-width: 100%;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-family: var(--font-monospace);
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  background: var(--bcgt-badge-bg, var(--interactive-accent));
+}
+.bcgt-badge-sym {
+  flex: none;
+}
+.bcgt-badge-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bcgt-badge-1 {
+  --bcgt-badge-bg: #ef4444;
+}
+.bcgt-badge-2 {
+  --bcgt-badge-bg: #3b82f6;
+}
+.bcgt-badge-3 {
+  --bcgt-badge-bg: #22c55e;
+}
+.bcgt-badge-4 {
+  --bcgt-badge-bg: #a855f7;
+}

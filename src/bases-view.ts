@@ -30,9 +30,19 @@ export class GroupTableView extends BasesView {
   // other bases when written during teardown).
   private saveFold = debounce(() => this.persistFold(), 700, true)
 
-  constructor(controller: QueryController, parentEl: HTMLElement) {
+  // Vault-wide date-format default from the plugin settings tab; a per-view
+  // dateFormat overrides it. Injected by the factory so the view stays decoupled
+  // from the plugin class (no circular import).
+  private getGlobalDateFormat: () => string
+
+  constructor(
+    controller: QueryController,
+    parentEl: HTMLElement,
+    getGlobalDateFormat: () => string = () => '',
+  ) {
     super(controller)
     this.viewContainerEl = parentEl.createDiv('bcgt-view')
+    this.getGlobalDateFormat = getGlobalDateFormat
   }
 
   onDataUpdated(): void {
@@ -171,7 +181,8 @@ export class GroupTableView extends BasesView {
       openBehavior: typeof this.config.get('openBehavior') === 'string'
         ? (this.config.get('openBehavior') as string)
         : 'first',
-      dateFormat: typeof df === 'string' ? df.trim() : '',
+      // Per-view value wins; blank inherits the global setting.
+      dateFormat: (typeof df === 'string' && df.trim()) || this.getGlobalDateFormat(),
     }
   }
 

@@ -17,6 +17,10 @@ interface CardConfig {
 
 const SEP = '/'
 
+// One fixed symbol per badge slot (slot 1..4), so slots are distinguishable at
+// a glance and each column keeps a stable identity across cards.
+const BADGE_SYMBOLS = ['★', '✓', '◆', '●']
+
 // Renders the grouped data as collapsible card sections. Shares buildGroupTree
 // (tree + relationship maps) with the table; the fold engine mirrors the table's
 // logic so collapse/accordion/open-behavior behave identically.
@@ -61,8 +65,13 @@ const buildCards = (container: HTMLElement, args: BuildTableArgs): void => {
   // Filename display: 'show' (default, below image), 'hide', or 'overlay'.
   const tm = cardCfg.get('cardTitle')
   const titleMode = tm === 'hide' || tm === 'overlay' ? tm : 'show'
-  const df = cardCfg.get('dateFormat')
-  const dateFormat = typeof df === 'string' ? df.trim() : ''
+  // Effective date format: per-view value, else the global plugin default —
+  // already resolved into settings by the view's readSettings().
+  const dateFormat = settings.dateFormat
+  // Up to 4 badge columns (slots 1..4). Slot position/symbol/colour are fixed by
+  // index; a badge shows when the entry's value for that column is truthy.
+  const badgeProps = [1, 2, 3, 4].map((i) => cardCfg.getAsPropertyId(`cardBadge${i}`))
+  const anyBadges = badgeProps.some((p) => p)
   container.style.setProperty('--bcgt-card-w', `${cardWidth}px`)
   container.style.setProperty('--bcgt-fit', imageFit)
 
@@ -216,6 +225,21 @@ const buildCards = (container: HTMLElement, args: BuildTableArgs): void => {
       if (!file) return
       evt.preventDefault()
       void app.workspace.openLinkText(file.path, file.path, evt.ctrlKey || evt.metaKey)
+    }
+    // Badges: fixed top-right stack. Each configured slot reserves a row (so a
+    // column keeps its position across cards); the pill shows only when truthy.
+    if (anyBadges) {
+      const badgeBox = card.createDiv('bcgt-card-badges')
+      badgeProps.forEach((prop, i) => {
+        if (!prop) return
+        const slot = badgeBox.createDiv('bcgt-badge-slot')
+        const v = valueOf(entry, prop)
+        if (v && v.isTruthy()) {
+          const pill = slot.createDiv(`bcgt-badge bcgt-badge-${i + 1}`)
+          pill.createSpan({ cls: 'bcgt-badge-sym', text: BADGE_SYMBOLS[i] })
+          pill.createSpan({ cls: 'bcgt-badge-label', text: config.getDisplayName(prop) })
+        }
+      })
     }
     let imgBox: HTMLElement | null = null
     if (imageProp) {

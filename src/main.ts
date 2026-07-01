@@ -6,6 +6,7 @@ import { CHANGELOG, ChangelogModal } from './changelog'
 interface PluginData {
   lastVersion?: string
   showChangelog?: boolean
+  dateFormat?: string
 }
 
 export default class CollapsingGroupTablePlugin extends Plugin {
@@ -18,6 +19,7 @@ export default class CollapsingGroupTablePlugin extends Plugin {
     this.data = {}
     if (raw && typeof raw.lastVersion === 'string') this.data.lastVersion = raw.lastVersion
     if (raw && typeof raw.showChangelog === 'boolean') this.data.showChangelog = raw.showChangelog
+    if (raw && typeof raw.dateFormat === 'string') this.data.dateFormat = raw.dateFormat
     this.addSettingTab(new CgtSettingTab(this.app, this))
     // Show "what's new" once after an update (not on first install), if enabled.
     const current = this.manifest.version
@@ -107,7 +109,8 @@ export default class CollapsingGroupTablePlugin extends Plugin {
     this.registerBasesView(VIEW_TYPE, {
       name: 'Collapsing group table',
       icon: 'lucide-list-tree',
-      factory: (controller, containerEl) => new GroupTableView(controller, containerEl),
+      factory: (controller, containerEl) =>
+        new GroupTableView(controller, containerEl, () => this.data.dateFormat ?? ''),
       options: (config: BasesViewConfig): BasesAllOptions[] => [
         {
           type: 'group',
@@ -128,7 +131,7 @@ export default class CollapsingGroupTablePlugin extends Plugin {
             },
             {
               type: 'text',
-              displayName: 'Date format (moment tokens, e.g. YYYY-MM-DD)',
+              displayName: 'Date format (blank = use the plugin default)',
               key: 'dateFormat',
               default: '',
               placeholder: 'YYYY-MM-DD',
@@ -143,7 +146,8 @@ export default class CollapsingGroupTablePlugin extends Plugin {
     this.registerBasesView(VIEW_TYPE_CARDS, {
       name: 'Collapsing group cards',
       icon: 'lucide-layout-grid',
-      factory: (controller, containerEl) => new GroupCardsView(controller, containerEl),
+      factory: (controller, containerEl) =>
+        new GroupCardsView(controller, containerEl, () => this.data.dateFormat ?? ''),
       options: (config: BasesViewConfig): BasesAllOptions[] => [
         {
           type: 'group',
@@ -194,11 +198,21 @@ export default class CollapsingGroupTablePlugin extends Plugin {
             },
             {
               type: 'text',
-              displayName: 'Date format (moment tokens, e.g. YYYY-MM-DD)',
+              displayName: 'Date format (blank = use the plugin default)',
               key: 'dateFormat',
               default: '',
               placeholder: 'YYYY-MM-DD',
             },
+          ],
+        },
+        {
+          type: 'group',
+          displayName: 'Card badges',
+          items: [
+            { type: 'property', displayName: 'Badge 1 (★)', key: 'cardBadge1' },
+            { type: 'property', displayName: 'Badge 2 (✓)', key: 'cardBadge2' },
+            { type: 'property', displayName: 'Badge 3 (◆)', key: 'cardBadge3' },
+            { type: 'property', displayName: 'Badge 4 (●)', key: 'cardBadge4' },
           ],
         },
         groupingGroup(config),
@@ -220,6 +234,20 @@ class CgtSettingTab extends PluginSettingTab {
 
   display(): void {
     this.containerEl.empty()
+    new Setting(this.containerEl)
+      .setName('Default date format')
+      .setDesc(
+        'Vault-wide date format (moment tokens, e.g. YYYY-MM-DD) for date cells and fields. A per-view Date format overrides this.',
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('YYYY-MM-DD')
+          .setValue(this.plugin.data.dateFormat ?? '')
+          .onChange(async (value) => {
+            this.plugin.data.dateFormat = value.trim()
+            await this.plugin.saveData(this.plugin.data)
+          }),
+      )
     new Setting(this.containerEl)
       .setName("Show what's new on update")
       .setDesc('Open a changelog popup the first time you run a new version.')

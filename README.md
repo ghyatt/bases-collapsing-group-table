@@ -113,6 +113,11 @@ The **Collapsing group cards** view renders entries as cards (cover image + titl
 
 The cover and filename are clickable to open the note.
 
+### Card badges
+Flag up to **4 columns** as badges. When a card's value for that column is **truthy** (checked box, non-empty text, non-zero number, non-empty list), a coloured pill appears at the card's **top-right** showing a slot symbol and the column name — e.g. a `read` checkbox shows `★ read`.
+
+Each of the four slots has a **fixed position, symbol, and colour** (① ★ ② ✓ ③ ◆ ④ ●), so a given column always sits in the same spot across every card; a slot with no value leaves its place blank rather than shifting the others.
+
 ## Configuration
 All options are set from the Base **view configuration** menu, organized into sections.
 
@@ -149,7 +154,15 @@ All options are set from the Base **view configuration** menu, organized into se
 | Filename | Show | Show below image / Hide / Overlay on hover. |
 | Image fit | Cover | Cover (crop to fill) or Contain (whole image). |
 | Image aspect ratio | 0 (natural) | Height ÷ width for uniform covers. |
-| Date format | (Obsidian default) | moment.js tokens applied to date fields. |
+| Badge 1–4 | — | Columns shown as coloured top-right badges when truthy (fixed slot, symbol, colour). |
+| Date format | (plugin default) | moment.js tokens applied to date fields; blank inherits the plugin setting. |
+
+**Plugin settings** (Settings → Community plugins → Collapsing Group Table)
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| Default date format | — | Vault-wide moment.js date format; a per-view Date format overrides it. |
+| Show what's new on update | on | Open the changelog popup after an update. |
 
 ## License
 [MIT](LICENSE) — provided as is. File bugs or feature requests on [GitHub](https://github.com/ghyatt/bases-collapsing-group-table/issues).
