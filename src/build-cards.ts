@@ -312,7 +312,7 @@ const buildCards = (container: HTMLElement, args: BuildTableArgs): void => {
   }
 
   if (isGrouped) {
-    const { roots, topLevelKeys: tlk } = buildGroupTree({
+    const { roots, topLevelKeys: tlk, rootEntries } = buildGroupTree({
       groups,
       keys,
       settings,
@@ -330,6 +330,12 @@ const buildCards = (container: HTMLElement, args: BuildTableArgs): void => {
           applyOpenBehavior(topKey)
         }
       }
+    }
+    // Cards for entries in the base's own folder (empty stripped value) go at
+    // the top, in their own grid, with no group header.
+    if (rootEntries.length > 0) {
+      const grid = container.createDiv('bcgt-card-grid')
+      for (const entry of rootEntries) renderCard(grid, entry)
     }
     for (const root of roots) renderNode(container, root, 0, [])
     for (const k of [...collapsed]) {

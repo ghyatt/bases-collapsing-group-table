@@ -69,6 +69,23 @@ There are two ways to nest, and they're mutually exclusive. Sub-group headers an
 
 **When opening a group** controls what the sub-groups do on open (and on initial load): open the **first** sub-group, **all** of them, or **none**.
 
+### Situational options — strip a prefix (folder MOCs)
+When nesting is on, **Strip prefix from values** removes a leading prefix from each group value *before* the `/` split, so a folder-based [Map of Content](https://obsidian.md/) shows clean relative paths. Enter either:
+
+- a **literal path** (e.g. `hobby/media`), or
+- the formula **`this.file.folder`**, which resolves to the base's own containing folder — so an embedded base strips its own folder with no path to type, and keeps working if you move it.
+
+Files that sit directly in the stripped folder (their value equals the prefix) render at the **top, ungrouped, with no header**; sub-folders become the top-level groups. e.g. a base in `hobby/media` with `stripPrefix: this.file.folder`:
+
+```
+Comedians.md        ← files in hobby/media, at the top
+media.md
+▾ reading
+▾ screen
+  └── ▾ screen → MCU
+▾ video games
+```
+
 ## Inline editing (table view)
 In the table view, click a cell backed by a note property to edit it; changes are written to the note's frontmatter.
 
@@ -106,9 +123,15 @@ All options are set from the Base **view configuration** menu, organized into se
 | Accordion mode | off | Expanding a top group collapses the others. |
 | Start with groups collapsed | off | Open with all groups folded. |
 | Show entry count on group headers | on | Show the entry-count badge. |
-| Split group value on "/" into nested groups | off | Split `/`-delimited group values into a nested tree. |
+| Split groupBy value on "/" to nest | off | Split `/`-delimited group values into a nested tree. |
 | Sub-group by (2nd / 3rd level) | — | Nest by additional columns (mutually exclusive with the "/" split). |
 | When opening a group | First sub-group | On open, expand the first / all / no sub-groups. |
+
+**Situational options** (both views; shown only when nesting is on)
+
+| Option | Default | Description |
+| --- | --- | --- |
+| Strip prefix from values | — | Remove a leading prefix from group values before the "/" split. A literal path, or a formula like `this.file.folder` to strip the base's own folder. |
 
 **Table**
 

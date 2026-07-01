@@ -67,7 +67,9 @@ interface BuildArgs {
 // the toggle is on, else use the whole value, then partition each group's
 // entries by the selected sub-group columns (values used WHOLE, never split).
 // Also populates the directChildren/descendants relationship maps.
-export const buildGroupTree = (args: BuildArgs): { roots: TreeNode[]; topLevelKeys: string[] } => {
+export const buildGroupTree = (
+  args: BuildArgs,
+): { roots: TreeNode[]; topLevelKeys: string[]; rootEntries: BasesEntry[] } => {
   const { groups, keys, settings, sep, valueOf, directChildren, descendants } = args
 
   // Internal separator for column-based fold keys (won't collide with "/" in
@@ -105,11 +107,18 @@ export const buildGroupTree = (args: BuildArgs): { roots: TreeNode[]; topLevelKe
   // toggle is on, the column pickers are ignored.
   const cols = settings.subGroup ? [] : settings.subCols
   const rootMap = new Map<string, TreeNode>()
+  // Entries whose (stripped) group value is empty — i.e. files directly in the
+  // base's own folder when a strip prefix removed it. They belong at the top,
+  // ungrouped, not under a phantom blank header.
+  const rootEntries: BasesEntry[] = []
   groups.forEach((group, gi) => {
     const segs = settings.subGroup
       ? keys[gi].split(sep).map((s) => s.trim()).filter((s) => s.length > 0)
       : [keys[gi]]
-    if (segs.length === 0) segs.push(keys[gi])
+    if (segs.length === 0) {
+      rootEntries.push(...group.entries)
+      return
+    }
     let level = rootMap
     let prefix = ''
     let node: TreeNode | undefined
@@ -140,5 +149,5 @@ export const buildGroupTree = (args: BuildArgs): { roots: TreeNode[]; topLevelKe
   const roots = [...rootMap.values()]
   for (const root of roots) collect(root)
 
-  return { roots, topLevelKeys: [...rootMap.keys()] }
+  return { roots, topLevelKeys: [...rootMap.keys()], rootEntries }
 }

@@ -61,20 +61,31 @@ export class GroupTableView extends BasesView {
     const keyOf = (group: { key?: { toString(): string }; hasKey(): boolean }): string =>
       group.hasKey() && group.key ? group.key.toString() : '__bcgt_none__'
 
-    const allKeys = groups.map(keyOf)
+    // "Situational options": strip a prefix from group values (only when nesting)
+    // so e.g. a folder MOC shows relative paths. Strip BEFORE the "/" split.
+    const stripPrefix = this.resolveStripPrefix(settings.subGroup)
+    const strip = (k: string): string => {
+      if (!stripPrefix) return k
+      if (k === stripPrefix) return '' // the base's own folder → root (ungrouped at top)
+      if (k.startsWith(stripPrefix + '/')) return k.slice(stripPrefix.length + 1)
+      return k
+    }
+
+    const allKeys = groups.map((g) => strip(keyOf(g)))
     // Top-level fold keys. With sub-grouping (Option X) the group value is split
     // on '/', so the top level is the distinct first segments; otherwise each
-    // full group value is its own top group.
+    // full group value is its own top group. An empty key (base-folder root) is
+    // not a foldable group, so drop it here.
     const topKeys = settings.subGroup
-      ? Array.from(new Set(allKeys.map((k) => k.split('/')[0])))
+      ? Array.from(new Set(allKeys.map((k) => k.split('/')[0]).filter((k) => k.length > 0)))
       : allKeys
 
     // The signature ties saved folds to the options that change the fold-key
-    // scheme (split toggle + chosen sub-group columns), so they don't carry over
-    // when those change.
+    // scheme (split toggle + sub-group columns + strip prefix), so they don't
+    // carry over when those change.
     const sig =
       `${settings.accordion ? 'acc' : ''}|${settings.startCollapsed ? 'sc' : ''}` +
-      `|${settings.subGroup ? 'sg' : ''}|${settings.subCols.join(',')}`
+      `|${settings.subGroup ? 'sg' : ''}|${settings.subCols.join(',')}|${stripPrefix}`
     // applyOpenDefault: true when we're showing the option-driven default (no
     // saved folds) — buildTable then initialises sub-groups per "when opening a
     // group". When restoring saved folds, we leave them as-is.
@@ -162,6 +173,25 @@ export class GroupTableView extends BasesView {
         : 'first',
       dateFormat: typeof df === 'string' ? df.trim() : '',
     }
+  }
+
+  // Resolve the "strip prefix" option (only when nesting). The field may hold a
+  // literal path OR a Bases formula (e.g. `this.file.folder` to strip the base's
+  // own folder): try evaluating it as a formula first; if that yields a string
+  // different from the literal, use it, else use the literal.
+  private resolveStripPrefix(subGroup: boolean): string {
+    if (!subGroup) return ''
+    const raw = this.config.get('stripPrefix')
+    if (typeof raw !== 'string' || !raw.trim()) return ''
+    const literal = raw.trim()
+    try {
+      const v = this.config.getEvaluatedFormula(this, 'stripPrefix')
+      const s = v ? v.toString() : ''
+      if (s && s !== 'null' && s !== literal) return s.trim()
+    } catch {
+      /* not a formula → use the literal */
+    }
+    return literal
   }
 
   // The selected sub-group property ids, in level order (2nd, 3rd), skipping

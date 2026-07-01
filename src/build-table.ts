@@ -959,7 +959,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
 
   if (isGrouped && (settings.subGroup || settings.subCols.length > 0)) {
     // Build the grouped tree + relationship maps (shared, view-agnostic core).
-    const { roots, topLevelKeys: tlk } = buildGroupTree({
+    const { roots, topLevelKeys: tlk, rootEntries } = buildGroupTree({
       groups,
       keys,
       settings,
@@ -969,6 +969,12 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
       descendants,
     })
     topLevelKeys = tlk
+    // Entries whose stripped group value is empty (files in the base's own
+    // folder) render at the top, un-railed, with no group header.
+    if (rootEntries.length > 0) {
+      const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
+      for (const entry of rootEntries) renderDataRow(tbody, entry, [], '')
+    }
     // Initialise sub-group folds per "when opening a group" for the default
     // (unsaved) state: open top groups get the open-behavior applied; collapsed
     // ones have their descendants collapsed too.

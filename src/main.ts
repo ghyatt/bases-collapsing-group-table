@@ -57,7 +57,7 @@ export default class CollapsingGroupTablePlugin extends Plugin {
           },
           {
             type: 'toggle',
-            displayName: 'Split group value on "/" into nested groups',
+            displayName: 'Split groupBy value on "/" to nest',
             key: 'subGroup',
             default: false,
           },
@@ -87,6 +87,22 @@ export default class CollapsingGroupTablePlugin extends Plugin {
         ],
       }
     }
+
+    // Context-specific options (only relevant when nesting is on).
+    const situationalGroup = (config: BasesViewConfig): BasesAllOptions => ({
+      type: 'group',
+      displayName: 'Situational options',
+      shouldHide: () => config.get('subGroup') !== true,
+      items: [
+        {
+          type: 'text',
+          displayName: 'Strip prefix from values (a literal path, or a formula like this.file.folder)',
+          key: 'stripPrefix',
+          default: '',
+          placeholder: 'this.file.folder',
+        },
+      ],
+    })
 
     this.registerBasesView(VIEW_TYPE, {
       name: 'Collapsing group table',
@@ -120,6 +136,7 @@ export default class CollapsingGroupTablePlugin extends Plugin {
           ],
         },
         groupingGroup(config),
+        situationalGroup(config),
       ],
     })
 
@@ -185,6 +202,7 @@ export default class CollapsingGroupTablePlugin extends Plugin {
           ],
         },
         groupingGroup(config),
+        situationalGroup(config),
       ],
     })
   }
