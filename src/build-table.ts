@@ -965,7 +965,7 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
       depth,
       node.key,
       ancestors,
-      breadcrumb.join(' → '),
+      settings.nestedLabel === 'own' ? segLabel : breadcrumb.join(' → '),
       nodeTotal(node),
       node.children.size,
       treePrefix,
@@ -998,10 +998,12 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
     topLevelKeys = tlk
     // Entries whose stripped group value is empty (files in the base's own
     // folder) render at the top, un-railed, with no group header.
-    if (rootEntries.length > 0) {
+    const renderRootEntries = (): void => {
+      if (rootEntries.length === 0) return
       const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
       for (const entry of rootEntries) renderDataRow(tbody, entry, [], '')
     }
+    if (settings.rootEntries === 'top') renderRootEntries()
     // Initialise sub-group folds per "when opening a group" for the default
     // (unsaved) state: open top groups get the open-behavior applied; collapsed
     // ones have their descendants collapsed too.
@@ -1014,12 +1016,21 @@ const buildTable = (container: HTMLElement, args: BuildTableArgs): void => {
         }
       }
     }
-    for (const root of roots) {
-      console.log("rendering root", root);
-      const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
-      console.log("tbody count (nested loop):", table.querySelectorAll("tbody").length);
-      renderNode(tbody, root, 0, [], [], '', true);
+    // 'sorted' interleaves ungrouped entries with the top-level groups by name
+    // (group label vs. file name), e.g. "03 Glossary" between "02 …" and "04 …".
+    const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare
+    type Item = { name: string; root?: TreeNode; entry?: BasesEntry }
+    const items: Item[] = roots.map((root) => ({ name: root.label, root }))
+    if (settings.rootEntries === 'sorted') {
+      for (const entry of rootEntries) items.push({ name: entry.file?.basename ?? '', entry })
+      items.sort((a, b) => byName(a.name, b.name))
     }
+    for (const item of items) {
+      const tbody = table.createEl('tbody', { cls: 'bcgt-group' })
+      if (item.root) renderNode(tbody, item.root, 0, [], [], '', true)
+      else if (item.entry) renderDataRow(tbody, item.entry, [], '')
+    }
+    if (settings.rootEntries === 'bottom') renderRootEntries()
   } else {
     // Flat: one tbody per Bases group (sub-grouping off, or no groupBy). No tree
     // connectors here — the empty prefix keeps rows un-railed.

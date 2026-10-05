@@ -437,11 +437,14 @@ const buildCards = (container: HTMLElement, args: BuildTableArgs): void => {
     }
     // Cards for entries in the base's own folder (empty stripped value) go at
     // the top, in their own grid, with no group header.
-    if (rootEntries.length > 0) {
+    const renderRootEntries = (): void => {
+      if (rootEntries.length === 0) return
       const grid = container.createDiv('bcgt-card-grid')
       for (const entry of rootEntries) renderCard(grid, entry)
     }
+    if (settings.rootEntries !== 'bottom') renderRootEntries()
     for (const root of roots) renderNode(container, root, 0, [])
+    if (settings.rootEntries === 'bottom') renderRootEntries()
     for (const k of [...collapsed]) {
       if (!allFoldKeys.has(k)) collapsed.delete(k)
     }

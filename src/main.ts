@@ -59,6 +59,12 @@ export default class CollapsingGroupTablePlugin extends Plugin {
           },
           {
             type: 'toggle',
+            displayName: 'Remember folds on this device only (do not write them to the .base file)',
+            key: 'foldOnDevice',
+            default: false,
+          },
+          {
+            type: 'toggle',
             displayName: 'Split groupBy value on "/" to nest',
             key: 'subGroup',
             default: false,
@@ -102,6 +108,27 @@ export default class CollapsingGroupTablePlugin extends Plugin {
           key: 'stripPrefix',
           default: '',
           placeholder: 'this.file.folder',
+        },
+        {
+          type: 'dropdown',
+          displayName: 'Nested group header label',
+          key: 'nestedLabel',
+          default: 'path',
+          options: {
+            path: 'Full path (A → B)',
+            own: 'Own name only',
+          },
+        },
+        {
+          type: 'dropdown',
+          displayName: 'Ungrouped entries (empty group value)',
+          key: 'rootEntries',
+          default: 'top',
+          options: {
+            top: 'Above the groups',
+            bottom: 'Below the groups',
+            sorted: 'Mixed with the groups, by name',
+          },
         },
       ],
     })

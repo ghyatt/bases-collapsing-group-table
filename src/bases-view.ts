@@ -35,12 +35,17 @@ export class GroupTableView extends BasesView {
   // from the plugin class (no circular import).
   private getGlobalDateFormat: () => string
 
+  // Where fold state lives for the current render (see `foldOnDevice`).
+  private foldOnDevice = false
+  private controller: QueryController
+
   constructor(
     controller: QueryController,
     parentEl: HTMLElement,
     getGlobalDateFormat: () => string = () => '',
   ) {
     super(controller)
+    this.controller = controller
     this.viewContainerEl = parentEl.createDiv('bcgt-view')
     this.getGlobalDateFormat = getGlobalDateFormat
   }
@@ -49,6 +54,7 @@ export class GroupTableView extends BasesView {
     this.viewContainerEl.empty()
 
     const settings = this.readSettings()
+    this.foldOnDevice = settings.foldOnDevice
     const groups = this.data.groupedData
 
     if (!groups || groups.length === 0) {
@@ -140,7 +146,11 @@ export class GroupTableView extends BasesView {
         applyOpenDefault,
         markTouched: () => {
           this.userTouched = true
-          this.saveFold()
+          // Device storage is cheap, so save right after this click's fold
+          // change (callers mark first, then change the folds): a click that
+          // opens a note leaves the view before a delayed save would run.
+          if (this.foldOnDevice) queueMicrotask(() => this.persistFold())
+          else this.saveFold()
         },
       })
     } catch (e) {
@@ -184,6 +194,11 @@ export class GroupTableView extends BasesView {
         : 'first',
       // Per-view value wins; blank inherits the global setting.
       dateFormat: (typeof df === 'string' && df.trim()) || this.getGlobalDateFormat(),
+      nestedLabel: this.config.get('nestedLabel') === 'own' ? 'own' : 'path',
+      rootEntries: ['bottom', 'sorted'].includes(this.config.get('rootEntries') as string)
+        ? (this.config.get('rootEntries') as string)
+        : 'top',
+      foldOnDevice: this.config.get('foldOnDevice') === true,
     }
   }
 
@@ -220,7 +235,7 @@ export class GroupTableView extends BasesView {
   // Saved folds if they match the current option-signature, else null. Keeps all
   // saved keys (top-level and sub-group); buildTable prunes any that are stale.
   private savedFold(sig: string): Set<string> | null {
-    const saved = this.config.get(FOLD_KEY)
+    const saved = this.foldOnDevice ? this.app.loadLocalStorage(this.deviceFoldKey()) : this.config.get(FOLD_KEY)
     if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
       const s = saved as { sig?: unknown; keys?: unknown }
       if (s.sig === sig && Array.isArray(s.keys)) {
@@ -243,7 +258,16 @@ export class GroupTableView extends BasesView {
   // the view is on-screen (never during teardown — that was the corruption).
   private persistFold(): void {
     if (this.collapsed === null || !this.viewContainerEl.isConnected) return
-    this.config.set(FOLD_KEY, { sig: this.collapseSig, keys: Array.from(this.collapsed) })
+    const state = { sig: this.collapseSig, keys: Array.from(this.collapsed) }
+    if (this.foldOnDevice) this.app.saveLocalStorage(this.deviceFoldKey(), state)
+    else this.config.set(FOLD_KEY, state)
+  }
+
+  // localStorage key for device-local fold state: the .base file path (when the
+  // controller exposes it) plus the view name, so each view keeps its own folds.
+  private deviceFoldKey(): string {
+    const file = (this.controller as unknown as { file?: { path?: string } }).file
+    return `bcgt-fold:${file?.path ?? ''}:${this.config.name}`
   }
 }
 
