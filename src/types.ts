@@ -21,4 +21,13 @@ export interface TableSettings {
   // string = use Obsidian's default date rendering. Works around the Bases API
   // not exposing the per-property date format to custom views.
   dateFormat: string
+  // Show each note's headings and block-ID'd blocks as foldable child rows:
+  // click folds a note or heading, double click opens it there.
+  noteOutline: boolean
+  // Open notes in the view mode (Reading, Live Preview, Source) of the note
+  // this view is embedded in.
+  keepViewMode: boolean
+  // Exclude notes inside any folder whose name starts with this text (e.g. "_"
+  // for _templates, _archive). Empty = hide nothing.
+  excludeFolderPrefix: string
 }
