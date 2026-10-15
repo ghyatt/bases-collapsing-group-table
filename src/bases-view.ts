@@ -1,4 +1,4 @@
-import { BasesView, BasesPropertyId, debounce, QueryController } from 'obsidian'
+import { BasesEntry, BasesEntryGroup, BasesView, BasesPropertyId, debounce, QueryController } from 'obsidian'
 import buildTable, { type BuildTableArgs } from './build-table'
 import buildCards from './build-cards'
 import renderError from './render-error'
@@ -49,7 +49,7 @@ export class GroupTableView extends BasesView {
     this.viewContainerEl.empty()
 
     const settings = this.readSettings()
-    const groups = this.data.groupedData
+    const groups = this.excludeFolders(this.data.groupedData, settings.excludeFolderPrefix)
 
     if (!groups || groups.length === 0) {
       renderError(this.viewContainerEl, 'No entries match this view.')
@@ -148,6 +148,22 @@ export class GroupTableView extends BasesView {
     }
   }
 
+  // Drop entries inside a folder whose name starts with `prefix`, and groups
+  // left empty. A view option, so it stays out of the Filter panel.
+  private excludeFolders(groups: BasesEntryGroup[], prefix: string): BasesEntryGroup[] {
+    if (!prefix) return groups
+    const hidden = (e: BasesEntry): boolean =>
+      (e.file?.path ?? '').split('/').slice(0, -1).some((seg) => seg.startsWith(prefix))
+    return groups
+      .map((g) => {
+        const entries = g.entries.filter((e) => !hidden(e))
+        return entries.length === g.entries.length
+          ? g
+          : (Object.assign(Object.create(Object.getPrototypeOf(g) as object), g, { entries }) as BasesEntryGroup)
+      })
+      .filter((g) => g.entries.length > 0)
+  }
+
   // The renderer — overridden by the cards view. Default is the table.
   protected build(container: HTMLElement, args: BuildTableArgs): void {
     buildTable(container, args)
@@ -184,6 +200,11 @@ export class GroupTableView extends BasesView {
         : 'first',
       // Per-view value wins; blank inherits the global setting.
       dateFormat: (typeof df === 'string' && df.trim()) || this.getGlobalDateFormat(),
+      noteOutline: this.config.get('noteOutline') === true,
+      keepViewMode: this.config.get('keepViewMode') === true,
+      excludeFolderPrefix: typeof this.config.get('excludeFolderPrefix') === 'string'
+        ? (this.config.get('excludeFolderPrefix') as string).trim()
+        : '',
     }
   }
 
